@@ -1,5 +1,12 @@
 package main
 
+import (
+	"os"
+	"runtime/debug"
+
+	"github.com/polevpn/elog"
+)
+
 func CheckSum(data []byte) uint16 {
 	var (
 		sum    uint32
@@ -20,4 +27,20 @@ func CheckSum(data []byte) uint16 {
 	sum += (sum >> 16)
 	//别忘了返回的时候先求反
 	return uint16(^sum)
+}
+
+func PanicHandler() {
+	if err := recover(); err != nil {
+		elog.Error("Panic Exception:", err)
+		elog.Error(string(debug.Stack()))
+	}
+}
+
+func PanicHandlerExit() {
+	if err := recover(); err != nil {
+		elog.Error("Panic Exception:", err)
+		elog.Error(string(debug.Stack()))
+		elog.Error("************Program Exit************")
+		os.Exit(0)
+	}
 }
