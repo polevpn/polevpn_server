@@ -65,7 +65,7 @@ func (t *TunIO) AddRoute(cidr string, gw string) error {
 }
 
 func (t *TunIO) Release() error {
-	return nil
+	return t.ifce.Close()
 }
 
 func (t *TunIO) Read() {

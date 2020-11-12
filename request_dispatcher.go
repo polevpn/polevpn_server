@@ -6,19 +6,20 @@ import (
 )
 
 type RequestDispatcher struct {
-	tunio *TunIO
+	tunio       *TunIO
+	connmgr     *WebSocketConnMgr
+	addresspool *AdressPool
 }
 
-func NewRequestDispatcher(tunio *TunIO) *RequestDispatcher {
+func NewRequestDispatcher(tunio *TunIO, connmgr *WebSocketConnMgr, addresspool *AdressPool) *RequestDispatcher {
 
-	return &RequestDispatcher{tunio: tunio}
+	return &RequestDispatcher{tunio: tunio, connmgr: connmgr, addresspool: addresspool}
 }
 
 func (r *RequestDispatcher) Dispatch(pkt []byte, conn *WebSocketConn) {
 
+	elog.Info("pkt:", pkt)
 	ppkt := PolePacket(pkt)
-	ppkt.Cmd()
-
 	switch ppkt.Cmd() {
 	case CMD_ALLOC_IPADDR:
 		r.handleAllocIPAddress(ppkt, conn)
@@ -33,9 +34,26 @@ func (r *RequestDispatcher) Dispatch(pkt []byte, conn *WebSocketConn) {
 	}
 }
 
+func (r *RequestDispatcher) NewConnection(conn *WebSocketConn, ip string) {
+	if ip != "" {
+		oldconn := r.connmgr.GetWebSocketConn(ip)
+		if oldconn != nil {
+			elog.Info("from %v,ip:%v reconnect ok")
+			oldconn.Close()
+			r.connmgr.AttachIPAddress(ip, conn)
+		}
+	}
+}
+
 func (r *RequestDispatcher) handleAllocIPAddress(pkt PolePacket, conn *WebSocketConn) {
 	av := anyvalue.New()
-	ip := "10.8.0.7"
+
+	ip := r.addresspool.Alloc()
+
+	if ip == "" {
+		elog.Error("ip alloc fail,no more ip address")
+	}
+	elog.Infof("alloc ip %v to %v", ip, conn.String())
 	av.SetValue("ip", ip)
 	body, _ := av.MarshalJSON()
 	buf := make([]byte, POLE_PACKET_HEADER_LEN+len(body))
@@ -44,7 +62,9 @@ func (r *RequestDispatcher) handleAllocIPAddress(pkt PolePacket, conn *WebSocket
 	resppkt.SetCmd(pkt.Cmd())
 	resppkt.SetSeq(pkt.Seq())
 	conn.Send(resppkt)
-	r.tunio.handler.connmgr.AttachIPAddress(ip, conn)
+	if ip != "" {
+		r.connmgr.AttachIPAddress(ip, conn)
+	}
 }
 
 func (r *RequestDispatcher) handleC2SIPData(pkt PolePacket, conn *WebSocketConn) {
@@ -55,9 +75,13 @@ func (r *RequestDispatcher) handleC2SIPData(pkt PolePacket, conn *WebSocketConn)
 }
 
 func (r *RequestDispatcher) handleHeartBeat(pkt PolePacket, conn *WebSocketConn) {
-
+	buf := make([]byte, POLE_PACKET_HEADER_LEN)
+	resppkt := PolePacket(buf)
+	resppkt.SetCmd(CMD_HEART_BEAT)
+	resppkt.SetSeq(pkt.Seq())
+	conn.Send(resppkt)
 }
 
 func (r *RequestDispatcher) handleClientClosed(pkt PolePacket, conn *WebSocketConn) {
-	r.tunio.handler.connmgr.DetachIPAddress("", conn)
+	//r.connmgr.DetachIPAddress("", conn)
 }

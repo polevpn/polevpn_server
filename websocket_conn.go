@@ -7,6 +7,10 @@ import (
 	"github.com/polevpn/elog"
 )
 
+const (
+	CH_WEBSOCKET_WRITE_SIZE = 100
+)
+
 type WebSocketConn struct {
 	conn    *websocket.Conn
 	wch     chan []byte
@@ -15,7 +19,7 @@ type WebSocketConn struct {
 }
 
 func NewWebSocketConn(conn *websocket.Conn, handler *RequestDispatcher) *WebSocketConn {
-	return &WebSocketConn{conn: conn, closed: false, wch: make(chan []byte, 100), handler: handler}
+	return &WebSocketConn{conn: conn, closed: false, wch: make(chan []byte, CH_WEBSOCKET_WRITE_SIZE), handler: handler}
 }
 
 func (wsc *WebSocketConn) Close() error {
@@ -24,6 +28,10 @@ func (wsc *WebSocketConn) Close() error {
 		return wsc.conn.Close()
 	}
 	return nil
+}
+
+func (wsc *WebSocketConn) String() string {
+	return wsc.conn.LocalAddr().String() + "-" + wsc.conn.RemoteAddr().String()
 }
 
 func (wsc *WebSocketConn) IsClosed() bool {
@@ -49,13 +57,16 @@ func (wsc *WebSocketConn) Read() {
 			} else {
 				elog.Error(wsc.conn.LocalAddr().String(), wsc.conn.RemoteAddr().String(), "conn read exception:", err)
 			}
+			pkt = make([]byte, POLE_PACKET_HEADER_LEN)
+			PolePacket(pkt).SetCmd(CMD_CLIENT_CLOSED)
+			go wsc.handler.Dispatch(pkt, wsc)
 			return
 		}
 		if mtype != websocket.BinaryMessage {
 			continue
 		}
 
-		go wsc.handler.Dispatch(pkt, wsc)
+		wsc.handler.Dispatch(pkt, wsc)
 
 	}
 

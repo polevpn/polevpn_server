@@ -8,7 +8,7 @@ type WebSocketConnMgr struct {
 }
 
 func NewWebSocketConnMgr() *WebSocketConnMgr {
-	return &WebSocketConnMgr{ip2conns: make(map[string]*WebSocketConn)}
+	return &WebSocketConnMgr{ip2conns: make(map[string]*WebSocketConn), mutex: &sync.Mutex{}}
 }
 
 func (wscm *WebSocketConnMgr) AttachIPAddress(ip string, conn *WebSocketConn) {
