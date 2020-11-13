@@ -17,15 +17,14 @@ func NewPacketDispatcher(size int, connmgr *WebSocketConnMgr) *PacketDispatcher 
 }
 
 func (p *PacketDispatcher) Dispatch(pkt []byte) {
-	// if p.dch != nil {
-	// 	p.dch <- pkt
-	// }
+
 	ipv4pkt := header.IPv4(pkt)
 
 	ipaddr := ipv4pkt.DestinationAddress().To4().String()
 	conn := p.connmgr.GetWebSocketConn(ipaddr)
 	if conn == nil {
-		elog.Info("connmgr can find wsconn for", ipaddr)
+		elog.Info("connmgr can't find wsconn for", ipaddr)
+		return
 	}
 	buf := make([]byte, len(pkt)+POLE_PACKET_HEADER_LEN)
 	copy(buf[POLE_PACKET_HEADER_LEN:], pkt)

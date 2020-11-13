@@ -14,6 +14,7 @@ type TunIO struct {
 	wch     chan []byte
 	mtu     int
 	handler *PacketDispatcher
+	closed  bool
 }
 
 func NewTunIO(size int, handler *PacketDispatcher) (*TunIO, error) {
@@ -26,7 +27,7 @@ func NewTunIO(size int, handler *PacketDispatcher) (*TunIO, error) {
 		return nil, err
 	}
 
-	return &TunIO{ifce: ifce, wch: make(chan []byte, size), mtu: 1500, handler: handler}, nil
+	return &TunIO{ifce: ifce, wch: make(chan []byte, size), mtu: 1500, handler: handler, closed: false}, nil
 }
 
 // ip addr add dev tun0 local 10.8.0.1 peer 10.8.0.2
@@ -64,16 +65,22 @@ func (t *TunIO) AddRoute(cidr string, gw string) error {
 
 }
 
-func (t *TunIO) Release() error {
+func (t *TunIO) Close() error {
+	if t.closed == true {
+		return nil
+	}
+
+	if t.wch != nil {
+		t.wch <- nil
+		close(t.wch)
+	}
+	t.closed = true
 	return t.ifce.Close()
 }
 
 func (t *TunIO) Read() {
 	defer func() {
-		if t.wch != nil {
-			t.wch <- nil
-			close(t.wch)
-		}
+		t.Close()
 	}()
 
 	defer PanicHandler()

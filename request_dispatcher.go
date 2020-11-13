@@ -18,7 +18,6 @@ func NewRequestDispatcher(tunio *TunIO, connmgr *WebSocketConnMgr, addresspool *
 
 func (r *RequestDispatcher) Dispatch(pkt []byte, conn *WebSocketConn) {
 
-	elog.Info("pkt:", pkt)
 	ppkt := PolePacket(pkt)
 	switch ppkt.Cmd() {
 	case CMD_ALLOC_IPADDR:
@@ -38,7 +37,7 @@ func (r *RequestDispatcher) NewConnection(conn *WebSocketConn, ip string) {
 	if ip != "" {
 		oldconn := r.connmgr.GetWebSocketConn(ip)
 		if oldconn != nil {
-			elog.Info("from %v,ip:%v reconnect ok")
+			elog.Infof("from %v,ip:%v reconnect ok", conn.String(), ip)
 			oldconn.Close()
 			r.connmgr.AttachIPAddress(ip, conn)
 		}

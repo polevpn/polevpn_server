@@ -25,6 +25,10 @@ func NewWebSocketConn(conn *websocket.Conn, handler *RequestDispatcher) *WebSock
 func (wsc *WebSocketConn) Close() error {
 	if wsc.closed == false {
 		wsc.closed = true
+		if wsc.wch != nil {
+			wsc.wch <- nil
+			close(wsc.wch)
+		}
 		return wsc.conn.Close()
 	}
 	return nil
@@ -41,10 +45,6 @@ func (wsc *WebSocketConn) IsClosed() bool {
 func (wsc *WebSocketConn) Read() {
 	defer func() {
 		wsc.Close()
-		if wsc.wch != nil {
-			wsc.wch <- nil
-			close(wsc.wch)
-		}
 	}()
 
 	defer PanicHandler()
