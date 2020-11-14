@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	CH_WEBSOCKET_WRITE_SIZE = 100
+	CH_WEBSOCKET_WRITE_SIZE = 2048
 )
 
 type WebSocketConn struct {
@@ -35,7 +35,7 @@ func (wsc *WebSocketConn) Close() error {
 }
 
 func (wsc *WebSocketConn) String() string {
-	return wsc.conn.LocalAddr().String() + "-" + wsc.conn.RemoteAddr().String()
+	return wsc.conn.LocalAddr().String() + "->" + wsc.conn.RemoteAddr().String()
 }
 
 func (wsc *WebSocketConn) IsClosed() bool {
@@ -59,14 +59,18 @@ func (wsc *WebSocketConn) Read() {
 			}
 			pkt = make([]byte, POLE_PACKET_HEADER_LEN)
 			PolePacket(pkt).SetCmd(CMD_CLIENT_CLOSED)
+			PolePacket(pkt).SetSeq(0)
 			go wsc.handler.Dispatch(pkt, wsc)
 			return
 		}
-		if mtype != websocket.BinaryMessage {
-			continue
+		if mtype == websocket.BinaryMessage {
+			wsc.handler.Dispatch(pkt, wsc)
+		} else if mtype == websocket.CloseMessage {
+			pkt = make([]byte, POLE_PACKET_HEADER_LEN)
+			PolePacket(pkt).SetCmd(CMD_CLIENT_CLOSED)
+			PolePacket(pkt).SetSeq(1)
+			go wsc.handler.Dispatch(pkt, wsc)
 		}
-
-		wsc.handler.Dispatch(pkt, wsc)
 
 	}
 
@@ -76,33 +80,31 @@ func (wsc *WebSocketConn) Write() {
 	defer PanicHandler()
 
 	for {
-		select {
-		case pkt, ok := <-wsc.wch:
-			if !ok {
-				elog.Error("get pkt from write channel fail,maybe channel closed")
-				return
-			} else {
-				if pkt == nil {
-					elog.Info("exit write process")
-					return
-				}
-				err := wsc.conn.WriteMessage(websocket.BinaryMessage, pkt)
-				if err != nil {
-					if err == io.EOF {
-						elog.Info(wsc.conn.LocalAddr().String(), wsc.conn.RemoteAddr().String(), "conn closed")
-					} else {
-						elog.Error(wsc.conn.LocalAddr().String(), wsc.conn.RemoteAddr().String(), "conn write exception:", err)
-					}
-					return
-				}
-			}
+
+		pkt, ok := <-wsc.wch
+		if !ok {
+			elog.Error("get pkt from write channel fail,maybe channel closed")
+			return
 		}
+		if pkt == nil {
+			elog.Info("exit write process")
+			return
+		}
+		err := wsc.conn.WriteMessage(websocket.BinaryMessage, pkt)
+		if err != nil {
+			if err == io.EOF {
+				elog.Info(wsc.conn.LocalAddr().String(), wsc.conn.RemoteAddr().String(), "conn closed")
+			} else {
+				elog.Error(wsc.conn.LocalAddr().String(), wsc.conn.RemoteAddr().String(), "conn write exception:", err)
+			}
+			return
+		}
+
 	}
 }
 
 func (wsc *WebSocketConn) Send(pkt []byte) {
 	if wsc.closed == true {
-		elog.Info("websocket connection is closed,can't send pkt")
 		return
 	}
 	if wsc.wch != nil {

@@ -7,8 +7,7 @@ import (
 )
 
 const (
-	CH_TUNIO_WRITE_SIZE       = 256
-	CH_PACKET_DISPATCHER_SIZE = 256
+	CH_TUNIO_WRITE_SIZE = 4096
 )
 
 func main() {
@@ -20,7 +19,7 @@ func main() {
 
 	network := "10.8.0.0/16"
 
-	addresspool, err := NewAdressPool(network)
+	addresspool, err := NewAddressPool(network)
 
 	if err != nil {
 		elog.Error("new address pool", err)
@@ -28,7 +27,10 @@ func main() {
 	}
 
 	connmgr := NewWebSocketConnMgr()
-	packetHandler := NewPacketDispatcher(CH_PACKET_DISPATCHER_SIZE, connmgr)
+
+	packetHandler := NewPacketDispatcher()
+
+	packetHandler.SetWebSocketConnMgr(connmgr)
 
 	tunio, err := NewTunIO(CH_TUNIO_WRITE_SIZE, packetHandler)
 
@@ -63,7 +65,11 @@ func main() {
 	go tunio.Read()
 	go tunio.Write()
 
-	wserver := NewWebSocketServer(NewRequestDispatcher(tunio, connmgr, addresspool))
+	requestHandler := NewRequestDispatcher()
+	requestHandler.SetTunIO(tunio)
+	requestHandler.SetWebSocketConnMgr(connmgr)
+
+	wserver := NewWebSocketServer(requestHandler)
 
 	elog.Infof("listen to %v", "0.0.0.0:8080")
 	err = wserver.Listen("0.0.0.0:8080", "/ws")

@@ -6,14 +6,21 @@ import (
 )
 
 type RequestDispatcher struct {
-	tunio       *TunIO
-	connmgr     *WebSocketConnMgr
-	addresspool *AdressPool
+	tunio   *TunIO
+	connmgr *WebSocketConnMgr
 }
 
-func NewRequestDispatcher(tunio *TunIO, connmgr *WebSocketConnMgr, addresspool *AdressPool) *RequestDispatcher {
+func NewRequestDispatcher() *RequestDispatcher {
 
-	return &RequestDispatcher{tunio: tunio, connmgr: connmgr, addresspool: addresspool}
+	return &RequestDispatcher{}
+}
+
+func (r *RequestDispatcher) SetTunIO(tunio *TunIO) {
+	r.tunio = tunio
+}
+
+func (r *RequestDispatcher) SetWebSocketConnMgr(connmgr *WebSocketConnMgr) {
+	r.connmgr = connmgr
 }
 
 func (r *RequestDispatcher) Dispatch(pkt []byte, conn *WebSocketConn) {
@@ -35,19 +42,20 @@ func (r *RequestDispatcher) Dispatch(pkt []byte, conn *WebSocketConn) {
 
 func (r *RequestDispatcher) NewConnection(conn *WebSocketConn, ip string) {
 	if ip != "" {
-		oldconn := r.connmgr.GetWebSocketConn(ip)
+		oldconn := r.connmgr.GetWebSocketConnByIP(ip)
 		if oldconn != nil {
-			elog.Infof("from %v,ip:%v reconnect ok", conn.String(), ip)
 			oldconn.Close()
-			r.connmgr.AttachIPAddress(ip, conn)
 		}
+		r.connmgr.AttachIPAddress(ip, conn)
+		elog.Infof("from %v,ip:%v reconnect ok", conn.String(), ip)
+
 	}
 }
 
 func (r *RequestDispatcher) handleAllocIPAddress(pkt PolePacket, conn *WebSocketConn) {
 	av := anyvalue.New()
 
-	ip := r.addresspool.Alloc()
+	ip := r.connmgr.AllocAddress()
 
 	if ip == "" {
 		elog.Error("ip alloc fail,no more ip address")
@@ -67,9 +75,12 @@ func (r *RequestDispatcher) handleAllocIPAddress(pkt PolePacket, conn *WebSocket
 }
 
 func (r *RequestDispatcher) handleC2SIPData(pkt PolePacket, conn *WebSocketConn) {
-	err := r.tunio.Enqueue(pkt[POLE_PACKET_HEADER_LEN:])
-	if err != nil {
-		elog.Error("tunio enqueue fail", err)
+
+	if r.tunio != nil {
+		err := r.tunio.Enqueue(pkt[POLE_PACKET_HEADER_LEN:])
+		if err != nil {
+			elog.Error("tunio enqueue fail", err)
+		}
 	}
 }
 
@@ -82,5 +93,12 @@ func (r *RequestDispatcher) handleHeartBeat(pkt PolePacket, conn *WebSocketConn)
 }
 
 func (r *RequestDispatcher) handleClientClosed(pkt PolePacket, conn *WebSocketConn) {
-	//r.connmgr.DetachIPAddress("", conn)
+
+	r.connmgr.DetachIPAddress(conn)
+
+	//just process motive close event
+	if pkt.Seq() == 1 {
+		r.connmgr.RelelaseAddress(r.connmgr.GeIPByWebsocketConn(conn))
+	}
+
 }

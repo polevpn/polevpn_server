@@ -23,10 +23,6 @@ func NewWebSocketServer(handler *RequestDispatcher) *WebSocketServer {
 	return &WebSocketServer{handler: handler, upgrader: upgrader}
 }
 
-func (wss *WebSocketServer) SetRequestDispatcher(handler *RequestDispatcher) {
-	wss.handler = handler
-}
-
 func (wss *WebSocketServer) Listen(addr string, path string) error {
 	http.HandleFunc(path, wss.wsHandler)
 	err := http.ListenAndServe(addr, nil)
@@ -56,14 +52,14 @@ func (wss *WebSocketServer) wsHandler(w http.ResponseWriter, r *http.Request) {
 	elog.Infof("user:%v,pwd:%v,ip:%v connect", user, pwd, ip)
 
 	if user != "polevpn" || pwd != "123456" {
-		elog.Error("user:%v,pwd:%v,ip:%v verify fail", user, pwd, ip)
+		elog.Errorf("user:%v,pwd:%v,ip:%v verify fail", user, pwd, ip)
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 
 	if ip != "" {
-		if !wss.handler.addresspool.IsAlloc(ip) {
-			elog.Error("user:%v,pwd:%v,ip:%v reconnect fail", user, pwd, ip)
+		if !wss.handler.connmgr.IsAllocedAddress(ip) {
+			elog.Errorf("user:%v,pwd:%v,ip:%v reconnect fail", user, pwd, ip)
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -80,9 +76,15 @@ func (wss *WebSocketServer) wsHandler(w http.ResponseWriter, r *http.Request) {
 		elog.Error("request dispatcher haven't set")
 		return
 	}
-	wsconn := NewWebSocketConn(conn, wss.handler)
 
-	wss.handler.NewConnection(wsconn, ip)
-	go wsconn.Read()
-	go wsconn.Write()
+	if wss.handler != nil {
+		wsconn := NewWebSocketConn(conn, wss.handler)
+		wss.handler.NewConnection(wsconn, ip)
+		go wsconn.Read()
+		go wsconn.Write()
+	} else {
+		elog.Error("ws conn handler haven't set")
+		conn.Close()
+	}
+
 }

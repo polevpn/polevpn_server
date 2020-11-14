@@ -5,7 +5,7 @@ import (
 	"sync"
 )
 
-type AdressPool struct {
+type AddressPool struct {
 	pool    map[string]bool
 	mutex   *sync.Mutex
 	gw1     string
@@ -13,7 +13,7 @@ type AdressPool struct {
 	network *net.IPNet
 }
 
-func NewAdressPool(cidr string) (*AdressPool, error) {
+func NewAddressPool(cidr string) (*AddressPool, error) {
 
 	_, network, err := net.ParseCIDR(cidr)
 	if err != nil {
@@ -48,10 +48,10 @@ func NewAdressPool(cidr string) (*AdressPool, error) {
 		}
 		pool[start.String()] = false
 	}
-	return &AdressPool{pool: pool, mutex: &sync.Mutex{}, gw1: gw1, gw2: gw2, network: network}, nil
+	return &AddressPool{pool: pool, mutex: &sync.Mutex{}, gw1: gw1, gw2: gw2, network: network}, nil
 }
 
-func (ap *AdressPool) Alloc() string {
+func (ap *AddressPool) Alloc() string {
 
 	ap.mutex.Lock()
 	defer ap.mutex.Unlock()
@@ -64,19 +64,19 @@ func (ap *AdressPool) Alloc() string {
 	return ""
 }
 
-func (ap *AdressPool) GatewayIP1() string {
+func (ap *AddressPool) GatewayIP1() string {
 	return ap.gw1
 }
-func (ap *AdressPool) GatewayIP2() string {
+func (ap *AddressPool) GatewayIP2() string {
 
 	return ap.gw2
 }
 
-func (ap *AdressPool) GetNetwork() string {
+func (ap *AddressPool) GetNetwork() string {
 	return ap.network.String()
 }
 
-func (ap *AdressPool) Release(ip string) {
+func (ap *AddressPool) Release(ip string) {
 	ap.mutex.Lock()
 	defer ap.mutex.Unlock()
 	_, ok := ap.pool[ip]
@@ -85,7 +85,7 @@ func (ap *AdressPool) Release(ip string) {
 	}
 }
 
-func (ap *AdressPool) IsAlloc(ip string) bool {
+func (ap *AddressPool) IsAlloc(ip string) bool {
 	ap.mutex.Lock()
 	defer ap.mutex.Unlock()
 	v, ok := ap.pool[ip]

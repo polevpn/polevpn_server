@@ -7,13 +7,16 @@ import (
 )
 
 type PacketDispatcher struct {
-	dch     chan []byte
 	connmgr *WebSocketConnMgr
 }
 
-func NewPacketDispatcher(size int, connmgr *WebSocketConnMgr) *PacketDispatcher {
+func NewPacketDispatcher() *PacketDispatcher {
 
-	return &PacketDispatcher{dch: make(chan []byte, size), connmgr: connmgr}
+	return &PacketDispatcher{}
+}
+
+func (p *PacketDispatcher) SetWebSocketConnMgr(connmgr *WebSocketConnMgr) {
+	p.connmgr = connmgr
 }
 
 func (p *PacketDispatcher) Dispatch(pkt []byte) {
@@ -21,7 +24,7 @@ func (p *PacketDispatcher) Dispatch(pkt []byte) {
 	ipv4pkt := header.IPv4(pkt)
 
 	ipaddr := ipv4pkt.DestinationAddress().To4().String()
-	conn := p.connmgr.GetWebSocketConn(ipaddr)
+	conn := p.connmgr.GetWebSocketConnByIP(ipaddr)
 	if conn == nil {
 		elog.Info("connmgr can't find wsconn for", ipaddr)
 		return
@@ -31,9 +34,5 @@ func (p *PacketDispatcher) Dispatch(pkt []byte) {
 	resppkt := PolePacket(buf)
 	resppkt.SetCmd(CMD_S2C_IPDATA)
 	conn.Send(resppkt)
-
-}
-
-func (p *PacketDispatcher) Process() {
 
 }

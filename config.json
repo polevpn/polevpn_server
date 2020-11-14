@@ -1,0 +1,8 @@
+{
+    "listen":"0.0.0.0:443",
+    "cert_file":"./keys/server.cert",
+    "key_file":"./keys/server.key",
+    "network_cidr":"10.8.0.0/16",
+    "traffic_limit":1048576
+
+}
