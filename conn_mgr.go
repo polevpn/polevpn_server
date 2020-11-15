@@ -38,17 +38,26 @@ func NewWebSocketConnMgr() *WebSocketConnMgr {
 func (wscm *WebSocketConnMgr) CheckTimeout() {
 	for range time.NewTicker(time.Second * CHECK_TIMEOUT_INTEVAL).C {
 		timeNow := time.Now()
+		iplist := make([]string, 0)
+		wscm.mutex.Lock()
 		for ip, lastActive := range wscm.ip2actives {
 			if timeNow.Sub(lastActive) > time.Minute*CONNECTION_TIMEOUT {
-				wscm.RelelaseAddress(ip)
-				conn, ok := wscm.ip2conns[ip]
-				if ok {
-					wscm.DetachIPAddress(conn)
-					wscm.DetachUserFromConn(conn)
-					conn.Close(false)
-				}
+				iplist = append(iplist, ip)
+
 			}
 		}
+		wscm.mutex.Unlock()
+
+		for _, ip := range iplist {
+			wscm.RelelaseAddress(ip)
+			conn := wscm.GetWebSocketConnByIP(ip)
+			if conn != nil {
+				wscm.DetachIPAddress(conn)
+				wscm.DetachUserFromConn(conn)
+				conn.Close(false)
+			}
+		}
+
 	}
 }
 
