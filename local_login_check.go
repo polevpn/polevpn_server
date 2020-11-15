@@ -1,7 +1,5 @@
 package main
 
-import "github.com/polevpn/elog"
-
 type LocalLoginChecker struct {
 }
 
@@ -18,8 +16,6 @@ func (llc *LocalLoginChecker) CheckLogin(user string, pwd string) bool {
 			if u["user"].(string) == user && u["pwd"].(string) == pwd {
 				return true
 			}
-		} else {
-			elog.Println("xxxxxxx")
 		}
 	}
 	return false

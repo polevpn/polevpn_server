@@ -5,6 +5,11 @@ import (
 	"github.com/polevpn/netstack/tcpip/header"
 )
 
+const (
+	IPV4_PROTOCOL = 4
+	IPV6_PROTOCOL = 6
+)
+
 type PacketDispatcher struct {
 	connmgr *WebSocketConnMgr
 }
@@ -19,6 +24,12 @@ func (p *PacketDispatcher) SetWebSocketConnMgr(connmgr *WebSocketConnMgr) {
 }
 
 func (p *PacketDispatcher) Dispatch(pkt []byte) {
+
+	ver := pkt[0]
+	ver = ver >> 4
+	if ver != IPV4_PROTOCOL {
+		return
+	}
 
 	ipv4pkt := header.IPv4(pkt)
 
