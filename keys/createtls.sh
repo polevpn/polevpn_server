@@ -1,1 +1,1 @@
-./create_self_signed_cert.sh "/C=US/ST=California/L=California/O=Apple Inc./OU=Apple Inc./CN=www.apple.com"
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout server.key -out server.crt
