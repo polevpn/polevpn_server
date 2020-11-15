@@ -1,9 +1,8 @@
 package main
 
 import (
-	"github.com/google/netstack/tcpip/header"
-	_ "github.com/google/netstack/tcpip/header"
 	"github.com/polevpn/elog"
+	"github.com/polevpn/netstack/tcpip/header"
 )
 
 type PacketDispatcher struct {
@@ -26,7 +25,7 @@ func (p *PacketDispatcher) Dispatch(pkt []byte) {
 	ipaddr := ipv4pkt.DestinationAddress().To4().String()
 	conn := p.connmgr.GetWebSocketConnByIP(ipaddr)
 	if conn == nil {
-		elog.Info("connmgr can't find wsconn for", ipaddr)
+		elog.Debug("connmgr can't find wsconn for", ipaddr)
 		return
 	}
 	buf := make([]byte, len(pkt)+POLE_PACKET_HEADER_LEN)

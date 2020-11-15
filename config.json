@@ -1,8 +1,12 @@
 {
     "listen":"0.0.0.0:443",
-    "cert_file":"./keys/server.cert",
+    "tls_mode":true,
+    "cert_file":"./keys/server.crt",
     "key_file":"./keys/server.key",
+    "endpoint":"/ws",
     "network_cidr":"10.8.0.0/16",
-    "traffic_limit":1048576
+    "upstream_traffic_limit":1048576,
+    "downstream_traffic_limit":1048576,
+    "users":[{"user":"polevpn","pwd":"123456"}]
 
 }

@@ -52,10 +52,10 @@ func (wsc *WebSocketConn) Read() {
 	for {
 		mtype, pkt, err := wsc.conn.ReadMessage()
 		if err != nil {
-			if err == io.EOF {
-				elog.Info(wsc.conn.LocalAddr().String(), wsc.conn.RemoteAddr().String(), "conn closed")
+			if err == io.ErrUnexpectedEOF || err == io.EOF {
+				elog.Info(wsc.String(), "conn closed")
 			} else {
-				elog.Error(wsc.conn.LocalAddr().String(), wsc.conn.RemoteAddr().String(), "conn read exception:", err)
+				elog.Error(wsc.String(), "conn read exception:", err)
 			}
 			pkt = make([]byte, POLE_PACKET_HEADER_LEN)
 			PolePacket(pkt).SetCmd(CMD_CLIENT_CLOSED)
@@ -83,19 +83,19 @@ func (wsc *WebSocketConn) Write() {
 
 		pkt, ok := <-wsc.wch
 		if !ok {
-			elog.Error("get pkt from write channel fail,maybe channel closed")
+			elog.Error(wsc.String(), "get pkt from write channel fail,maybe channel closed")
 			return
 		}
 		if pkt == nil {
-			elog.Info("exit write process")
+			elog.Info(wsc.String(), "exit write process for")
 			return
 		}
 		err := wsc.conn.WriteMessage(websocket.BinaryMessage, pkt)
 		if err != nil {
-			if err == io.EOF {
-				elog.Info(wsc.conn.LocalAddr().String(), wsc.conn.RemoteAddr().String(), "conn closed")
+			if err == io.EOF || err == io.ErrUnexpectedEOF {
+				elog.Info(wsc.String(), "conn closed")
 			} else {
-				elog.Error(wsc.conn.LocalAddr().String(), wsc.conn.RemoteAddr().String(), "conn write exception:", err)
+				elog.Error(wsc.String(), "conn write exception:", err)
 			}
 			return
 		}

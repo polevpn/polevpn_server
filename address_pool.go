@@ -53,8 +53,6 @@ func NewAddressPool(cidr string) (*AddressPool, error) {
 
 func (ap *AddressPool) Alloc() string {
 
-	ap.mutex.Lock()
-	defer ap.mutex.Unlock()
 	for ip, used := range ap.pool {
 		if used == false {
 			ap.pool[ip] = true
@@ -77,8 +75,6 @@ func (ap *AddressPool) GetNetwork() string {
 }
 
 func (ap *AddressPool) Release(ip string) {
-	ap.mutex.Lock()
-	defer ap.mutex.Unlock()
 	_, ok := ap.pool[ip]
 	if ok {
 		ap.pool[ip] = false
@@ -86,8 +82,7 @@ func (ap *AddressPool) Release(ip string) {
 }
 
 func (ap *AddressPool) IsAlloc(ip string) bool {
-	ap.mutex.Lock()
-	defer ap.mutex.Unlock()
+
 	v, ok := ap.pool[ip]
 	if ok {
 		return v

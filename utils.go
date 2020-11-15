@@ -4,8 +4,18 @@ import (
 	"os"
 	"runtime/debug"
 
+	"github.com/polevpn/anyvalue"
 	"github.com/polevpn/elog"
 )
+
+func GetConfig(configfile string) (*anyvalue.AnyValue, error) {
+
+	f, err := os.Open(configfile)
+	if err != nil {
+		return nil, err
+	}
+	return anyvalue.NewFromJsonReader(f)
+}
 
 func PanicHandler() {
 	if err := recover(); err != nil {
