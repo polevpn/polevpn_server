@@ -10,11 +10,14 @@ import (
 )
 
 type TunIO struct {
-	ifce    *water.Interface
-	wch     chan []byte
-	mtu     int
-	handler *PacketDispatcher
-	closed  bool
+	ifce      *water.Interface
+	wch       chan []byte
+	mtu       int
+	handler   *PacketDispatcher
+	tfcounter *TrafficCounter
+	closed    bool
+	uplimit   uint64
+	downlimit uint64
 }
 
 func NewTunIO(size int, handler *PacketDispatcher) (*TunIO, error) {
@@ -26,8 +29,13 @@ func NewTunIO(size int, handler *PacketDispatcher) (*TunIO, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	return &TunIO{ifce: ifce, wch: make(chan []byte, size), mtu: 1500, handler: handler, closed: false}, nil
+	return &TunIO{
+		ifce:    ifce,
+		wch:     make(chan []byte, size),
+		mtu:     1500,
+		handler: handler,
+		closed:  false,
+	}, nil
 }
 
 // ip addr add dev tun0 local 10.8.0.1 peer 10.8.0.2
@@ -76,7 +84,7 @@ func (t *TunIO) Close() error {
 	return t.ifce.Close()
 }
 
-func (t *TunIO) Read() {
+func (t *TunIO) read() {
 	defer func() {
 		t.Close()
 	}()
@@ -92,12 +100,13 @@ func (t *TunIO) Read() {
 			return
 		}
 		pkt = pkt[:n]
+
 		t.handler.Dispatch(pkt)
 	}
 
 }
 
-func (t *TunIO) Write() {
+func (t *TunIO) write() {
 	defer PanicHandlerExit()
 
 	for {
@@ -110,6 +119,7 @@ func (t *TunIO) Write() {
 			elog.Info("exit write process")
 			return
 		}
+
 		_, err := t.ifce.Write(pkt)
 		if err != nil {
 			if err == io.EOF {
@@ -129,4 +139,9 @@ func (t *TunIO) Enqueue(pkt []byte) error {
 	}
 	t.wch <- pkt
 	return nil
+}
+
+func (t *TunIO) StartProcess() {
+	go t.read()
+	go t.write()
 }

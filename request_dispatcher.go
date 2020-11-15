@@ -29,15 +29,15 @@ func (r *RequestDispatcher) Dispatch(pkt []byte, conn *WebSocketConn) {
 	ppkt := PolePacket(pkt)
 	switch ppkt.Cmd() {
 	case CMD_ALLOC_IPADDR:
-		elog.Info("received alloc ip adress request", conn.String())
+		elog.Info("received alloc ip adress request from", conn.String())
 		r.handleAllocIPAddress(ppkt, conn)
 	case CMD_C2S_IPDATA:
 		r.handleC2SIPData(ppkt, conn)
 	case CMD_HEART_BEAT:
-		elog.Info("received heart beat request", conn.String())
+		//elog.Info("received heart beat request", conn.String())
 		r.handleHeartBeat(ppkt, conn)
 	case CMD_CLIENT_CLOSED:
-		elog.Info("connection closed", conn.String())
+		elog.Info("connection closed event from", conn.String())
 		r.handleClientClosed(ppkt, conn)
 	default:
 		elog.Error("invalid pkt cmd=", ppkt.Cmd())
@@ -48,7 +48,7 @@ func (r *RequestDispatcher) NewConnection(conn *WebSocketConn, user string, ip s
 	if ip != "" {
 		oldconn := r.connmgr.GetWebSocketConnByIP(ip)
 		if oldconn != nil {
-			oldconn.Close()
+			oldconn.Close(true)
 		}
 		r.connmgr.AttachIPAddress(ip, conn)
 		elog.Infof("from %v,ip:%v reconnect ok", conn.String(), ip)
@@ -98,10 +98,10 @@ func (r *RequestDispatcher) handleHeartBeat(pkt PolePacket, conn *WebSocketConn)
 	resppkt.SetSeq(pkt.Seq())
 	conn.Send(resppkt)
 	r.connmgr.UpdateConnActiveTime(conn)
-	r.count++
-	if r.count%2 == 0 {
-		conn.Close()
-	}
+	// r.count++
+	// if r.count%2 == 0 {
+	// 	conn.Close()
+	// }
 }
 
 func (r *RequestDispatcher) handleClientClosed(pkt PolePacket, conn *WebSocketConn) {

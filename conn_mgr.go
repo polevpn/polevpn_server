@@ -44,7 +44,8 @@ func (wscm *WebSocketConnMgr) CheckTimeout() {
 				conn, ok := wscm.ip2conns[ip]
 				if ok {
 					wscm.DetachIPAddress(conn)
-					conn.Close()
+					wscm.DetachUserFromConn(conn)
+					conn.Close(false)
 				}
 			}
 		}

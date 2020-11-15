@@ -2,6 +2,7 @@ package main
 
 import (
 	"io"
+	"time"
 
 	"github.com/gorilla/websocket"
 	"github.com/polevpn/elog"
@@ -12,24 +13,42 @@ const (
 )
 
 type WebSocketConn struct {
-	conn    *websocket.Conn
-	wch     chan []byte
-	closed  bool
-	handler *RequestDispatcher
+	conn      *websocket.Conn
+	wch       chan []byte
+	closed    bool
+	handler   *RequestDispatcher
+	downlimit uint64
+	uplimit   uint64
+	tfcounter *TrafficCounter
 }
 
-func NewWebSocketConn(conn *websocket.Conn, handler *RequestDispatcher) *WebSocketConn {
-	return &WebSocketConn{conn: conn, closed: false, wch: make(chan []byte, CH_WEBSOCKET_WRITE_SIZE), handler: handler}
+func NewWebSocketConn(conn *websocket.Conn, downlimit uint64, uplimit uint64, handler *RequestDispatcher) *WebSocketConn {
+	return &WebSocketConn{
+		conn:      conn,
+		closed:    false,
+		wch:       make(chan []byte, CH_WEBSOCKET_WRITE_SIZE),
+		handler:   handler,
+		downlimit: downlimit,
+		uplimit:   uplimit,
+		tfcounter: NewTrafficCounter(),
+	}
 }
 
-func (wsc *WebSocketConn) Close() error {
+func (wsc *WebSocketConn) Close(flag bool) error {
 	if wsc.closed == false {
 		wsc.closed = true
 		if wsc.wch != nil {
 			wsc.wch <- nil
 			close(wsc.wch)
 		}
-		return wsc.conn.Close()
+		err := wsc.conn.Close()
+		if flag {
+			pkt := make([]byte, POLE_PACKET_HEADER_LEN)
+			PolePacket(pkt).SetCmd(CMD_CLIENT_CLOSED)
+			PolePacket(pkt).SetSeq(0)
+			go wsc.handler.Dispatch(pkt, wsc)
+		}
+		return err
 	}
 	return nil
 }
@@ -44,7 +63,7 @@ func (wsc *WebSocketConn) IsClosed() bool {
 
 func (wsc *WebSocketConn) Read() {
 	defer func() {
-		wsc.Close()
+		wsc.Close(true)
 	}()
 
 	defer PanicHandler()
@@ -57,21 +76,23 @@ func (wsc *WebSocketConn) Read() {
 			} else {
 				elog.Error(wsc.String(), "conn read exception:", err)
 			}
-			pkt = make([]byte, POLE_PACKET_HEADER_LEN)
-			PolePacket(pkt).SetCmd(CMD_CLIENT_CLOSED)
-			PolePacket(pkt).SetSeq(0)
-			go wsc.handler.Dispatch(pkt, wsc)
 			return
 		}
 		if mtype == websocket.BinaryMessage {
-			wsc.handler.Dispatch(pkt, wsc)
-		} else if mtype == websocket.CloseMessage {
-			pkt = make([]byte, POLE_PACKET_HEADER_LEN)
-			PolePacket(pkt).SetCmd(CMD_CLIENT_CLOSED)
-			PolePacket(pkt).SetSeq(1)
-			go wsc.handler.Dispatch(pkt, wsc)
-		}
 
+			//traffic limit
+			ppkt := PolePacket(pkt)
+			if ppkt.Cmd() == CMD_C2S_IPDATA {
+				bytes, ltime := wsc.tfcounter.UPStreamCount(uint64(len(ppkt.Payload())))
+				if bytes > wsc.uplimit {
+					duration := ltime.Add(time.Second).Sub(time.Now())
+					if duration > 0 {
+						time.Sleep(duration)
+					}
+				}
+			}
+			wsc.handler.Dispatch(pkt, wsc)
+		}
 	}
 
 }
@@ -87,9 +108,22 @@ func (wsc *WebSocketConn) Write() {
 			return
 		}
 		if pkt == nil {
-			elog.Info(wsc.String(), "exit write process for")
+			elog.Info(wsc.String(), "exit write process")
 			return
 		}
+
+		//traffic limit
+		ppkt := PolePacket(pkt)
+		if ppkt.Cmd() == CMD_S2C_IPDATA {
+			bytes, ltime := wsc.tfcounter.DownStreamCount(uint64(len(ppkt.Payload())))
+			if bytes > wsc.downlimit {
+				duration := ltime.Add(time.Second).Sub(time.Now())
+				if duration > 0 {
+					time.Sleep(duration)
+				}
+			}
+		}
+
 		err := wsc.conn.WriteMessage(websocket.BinaryMessage, pkt)
 		if err != nil {
 			if err == io.EOF || err == io.ErrUnexpectedEOF {

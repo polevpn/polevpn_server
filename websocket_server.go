@@ -11,9 +11,11 @@ type WebSocketServer struct {
 	handler      *RequestDispatcher
 	loginchecker LoginChecker
 	upgrader     *websocket.Upgrader
+	uplimit      uint64
+	downlimit    uint64
 }
 
-func NewWebSocketServer(handler *RequestDispatcher) *WebSocketServer {
+func NewWebSocketServer(uplimit uint64, downlimit uint64, handler *RequestDispatcher) *WebSocketServer {
 
 	upgrader := &websocket.Upgrader{
 		CheckOrigin: func(r *http.Request) bool {
@@ -21,7 +23,7 @@ func NewWebSocketServer(handler *RequestDispatcher) *WebSocketServer {
 		},
 	}
 
-	return &WebSocketServer{handler: handler, upgrader: upgrader}
+	return &WebSocketServer{handler: handler, upgrader: upgrader, uplimit: uplimit, downlimit: downlimit}
 }
 
 func (wss *WebSocketServer) SetLoginCheckHandler(loginchecker LoginChecker) {
@@ -91,7 +93,7 @@ func (wss *WebSocketServer) wsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if wss.handler != nil {
-		wsconn := NewWebSocketConn(conn, wss.handler)
+		wsconn := NewWebSocketConn(conn, wss.downlimit, wss.uplimit, wss.handler)
 		wss.handler.NewConnection(wsconn, user, ip)
 		go wsconn.Read()
 		go wsconn.Write()

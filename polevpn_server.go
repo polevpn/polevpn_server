@@ -60,14 +60,17 @@ func (ps *PoleVPNServer) Start(config *anyvalue.AnyValue) error {
 		return err
 	}
 
-	go tunio.Read()
-	go tunio.Write()
+	tunio.StartProcess()
+
 	loginchecker := NewLocalLoginChecker()
 	requestHandler := NewRequestDispatcher()
 	requestHandler.SetTunIO(tunio)
 	requestHandler.SetWebSocketConnMgr(connmgr)
 
-	wserver := NewWebSocketServer(requestHandler)
+	upstream := config.Get("upstream_traffic_limit").AsUint64()
+	downstream := config.Get("downstream_traffic_limit").AsUint64()
+
+	wserver := NewWebSocketServer(upstream, downstream, requestHandler)
 	wserver.SetLoginCheckHandler(loginchecker)
 
 	elog.Infof("listen %v,endpoint %v", config.Get("listen").AsStr(), config.Get("endpoint").AsStr())
