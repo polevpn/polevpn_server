@@ -5,6 +5,7 @@
     "key_file":"./keys/server.key",
     "endpoint":"/ws",
     "network_cidr":"10.8.0.0/16",
+    "dns_server":"223.5.5.5",
     "upstream_traffic_limit":524288,
     "downstream_traffic_limit":1048576,
     "users":[{"user":"polevpn","pwd":"123456"}]

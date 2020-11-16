@@ -4,7 +4,9 @@ import (
 	"flag"
 	"os"
 	"os/signal"
+	"runtime"
 	"syscall"
+	"time"
 
 	"github.com/polevpn/anyvalue"
 	"github.com/polevpn/elog"
@@ -43,6 +45,14 @@ func main() {
 	flag.Parse()
 
 	signalHandler()
+
+	go func() {
+		for range time.NewTicker(time.Second * 5).C {
+			m := runtime.MemStats{}
+			runtime.ReadMemStats(&m)
+			elog.Printf("mem=%v,go=%v", m.HeapAlloc, runtime.NumGoroutine())
+		}
+	}()
 
 	var err error
 

@@ -67,7 +67,8 @@ func (r *RequestDispatcher) handleAllocIPAddress(pkt PolePacket, conn *WebSocket
 		elog.Error("ip alloc fail,no more ip address")
 	}
 	elog.Infof("alloc ip %v to %v", ip, conn.String())
-	av.SetValue("ip", ip)
+	av.Set("ip", ip)
+	av.Set("dns", Config.Get("dns_server").AsStr())
 	body, _ := av.MarshalJSON()
 	buf := make([]byte, POLE_PACKET_HEADER_LEN+len(body))
 	copy(buf[POLE_PACKET_HEADER_LEN:], body)
@@ -100,7 +101,7 @@ func (r *RequestDispatcher) handleHeartBeat(pkt PolePacket, conn *WebSocketConn)
 	r.connmgr.UpdateConnActiveTime(conn)
 	// r.count++
 	// if r.count%2 == 0 {
-	// 	conn.Close()
+	// 	conn.Close(true)
 	// }
 }
 

@@ -4,6 +4,10 @@ import (
 	"time"
 )
 
+const (
+	TRAFFIC_LIMIT_INTERVAL = 100
+)
+
 type TrafficCounter struct {
 	upIPbytes        uint64
 	downIPbytes      uint64
@@ -28,7 +32,7 @@ func (tl *TrafficCounter) UPStreamCount(bytes uint64) (uint64, time.Time) {
 
 	now := time.Now()
 
-	if now.Sub(tl.upIPLastTime) > time.Second {
+	if now.Sub(tl.upIPLastTime) > time.Millisecond*TRAFFIC_LIMIT_INTERVAL {
 		tl.upIPbytes = 0
 		tl.upIPLastTime = time.Now()
 	}
@@ -41,7 +45,7 @@ func (tl *TrafficCounter) UPStreamCount(bytes uint64) (uint64, time.Time) {
 func (tl *TrafficCounter) DownStreamCount(bytes uint64) (uint64, time.Time) {
 	now := time.Now()
 
-	if now.Sub(tl.downIPLastTime) > time.Second {
+	if now.Sub(tl.downIPLastTime) > time.Millisecond*TRAFFIC_LIMIT_INTERVAL {
 		tl.downIPbytes = 0
 		tl.downIPLastTime = time.Now()
 	}

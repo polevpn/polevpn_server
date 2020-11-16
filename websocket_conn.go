@@ -84,8 +84,8 @@ func (wsc *WebSocketConn) Read() {
 			ppkt := PolePacket(pkt)
 			if ppkt.Cmd() == CMD_C2S_IPDATA {
 				bytes, ltime := wsc.tfcounter.UPStreamCount(uint64(len(ppkt.Payload())))
-				if bytes > wsc.uplimit {
-					duration := ltime.Add(time.Second).Sub(time.Now())
+				if bytes > wsc.uplimit/10 {
+					duration := ltime.Add(time.Millisecond * TRAFFIC_LIMIT_INTERVAL).Sub(time.Now())
 					if duration > 0 {
 						time.Sleep(duration)
 					}
@@ -116,8 +116,8 @@ func (wsc *WebSocketConn) Write() {
 		ppkt := PolePacket(pkt)
 		if ppkt.Cmd() == CMD_S2C_IPDATA {
 			bytes, ltime := wsc.tfcounter.DownStreamCount(uint64(len(ppkt.Payload())))
-			if bytes > wsc.downlimit {
-				duration := ltime.Add(time.Second).Sub(time.Now())
+			if bytes > wsc.downlimit/10 {
+				duration := ltime.Add(time.Millisecond * TRAFFIC_LIMIT_INTERVAL).Sub(time.Now())
 				if duration > 0 {
 					time.Sleep(duration)
 				}
