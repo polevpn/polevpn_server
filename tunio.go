@@ -55,7 +55,7 @@ func (t *TunIO) Enanble() error {
 	out, err := exec.Command("bash", "-c", "ip link set "+t.ifce.Name()+" up").Output()
 
 	if err != nil {
-		return errors.New(err.Error() + ":" + string(out))
+		return errors.New(err.Error() + "," + string(out))
 	}
 	return nil
 }
@@ -64,7 +64,7 @@ func (t *TunIO) AddRoute(cidr string, gw string) error {
 	out, err := exec.Command("bash", "-c", "ip route add "+cidr+" via "+gw).Output()
 
 	if err != nil {
-		return errors.New(err.Error() + ":" + string(out))
+		return errors.New(err.Error() + "," + string(out))
 	}
 
 	return err
