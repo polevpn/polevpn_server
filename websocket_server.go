@@ -40,7 +40,12 @@ func (wss *WebSocketServer) Listen(addr string, path string) error {
 	return nil
 }
 
+func (wss *WebSocketServer) defaultHandler(w http.ResponseWriter, r *http.Request) {
+	wss.respError(http.StatusForbidden, w)
+}
+
 func (wss *WebSocketServer) ListenTLS(addr string, certFile string, keyFile string, path string) error {
+	http.HandleFunc("/", wss.defaultHandler)
 	http.HandleFunc(path, wss.wsHandler)
 	err := http.ListenAndServeTLS(addr, certFile, keyFile, nil)
 
@@ -48,6 +53,19 @@ func (wss *WebSocketServer) ListenTLS(addr string, certFile string, keyFile stri
 		return err
 	}
 	return nil
+}
+
+func (wss *WebSocketServer) respError(status int, w http.ResponseWriter) {
+	if status == http.StatusBadRequest {
+		w.Header().Add("Server", "nginx/1.10.3")
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("<html>\n<head><title>400 Bad Request</title></head>\n<body bgcolor=\"white\">\n<center><h1>400 Bad Request</h1></center>\n<hr><center>nginx/1.10.3</center>\n</body>\n</html>"))
+	} else if status == http.StatusForbidden {
+		w.Header().Add("Server", "nginx/1.10.3")
+		w.WriteHeader(http.StatusForbidden)
+		w.Write([]byte("<html>\n<head><title>403 Forbidden</title></head>\n<body bgcolor=\"white\">\n<center><h1>403 Forbidden</h1></center>\n<hr><center>nginx/1.10.3</center>\n</body>\n</html>"))
+
+	}
 }
 
 func (wss *WebSocketServer) wsHandler(w http.ResponseWriter, r *http.Request) {
@@ -62,20 +80,21 @@ func (wss *WebSocketServer) wsHandler(w http.ResponseWriter, r *http.Request) {
 
 	if !wss.loginchecker.CheckLogin(user, pwd) {
 		elog.Errorf("user:%v,pwd:%v,ip:%v verify fail", user, pwd, ip)
-		w.WriteHeader(http.StatusUnauthorized)
+		wss.respError(http.StatusForbidden, w)
 		return
 	}
 
 	if ip != "" {
 		if !wss.handler.connmgr.IsAllocedAddress(ip) {
 			elog.Errorf("user:%v,pwd:%v,ip:%v reconnect fail,ip address not alloc to it", user, pwd, ip)
-			w.WriteHeader(http.StatusBadRequest)
+			wss.respError(http.StatusBadRequest, w)
+
 			return
 		}
 
 		if wss.handler.connmgr.GetIPAttachUser(ip) != user {
 			elog.Errorf("user:%v,pwd:%v,ip:%v reconnect fail,ip address not belong to the user", user, pwd, ip)
-			w.WriteHeader(http.StatusBadRequest)
+			wss.respError(http.StatusBadRequest, w)
 			return
 		}
 	}
