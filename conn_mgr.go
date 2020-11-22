@@ -117,6 +117,10 @@ func (wscm *WebSocketConnMgr) UpdateConnActiveTime(conn *WebSocketConn) {
 func (wscm *WebSocketConnMgr) AttachIPAddress(ip string, conn *WebSocketConn) {
 	wscm.mutex.Lock()
 	defer wscm.mutex.Unlock()
+	sconn, ok := wscm.ip2conns[ip]
+	if ok {
+		delete(wscm.conn2ips, sconn.String())
+	}
 	wscm.ip2conns[ip] = conn
 	wscm.conn2ips[conn.String()] = ip
 }
@@ -133,7 +137,10 @@ func (wscm *WebSocketConnMgr) DetachIPAddress(conn *WebSocketConn) {
 	defer wscm.mutex.Unlock()
 	ip, ok := wscm.conn2ips[conn.String()]
 	if ok {
-		delete(wscm.ip2conns, ip)
+		sconn, ok := wscm.ip2conns[ip]
+		if ok && sconn.String() == conn.String() {
+			delete(wscm.ip2conns, ip)
+		}
 		delete(wscm.conn2ips, conn.String())
 	}
 }

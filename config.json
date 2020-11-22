@@ -6,8 +6,8 @@
     "endpoint":"/ws",
     "network_cidr":"10.8.0.0/16",
     "dns_server":"8.8.8.8",
-    "upstream_traffic_limit":524288,
-    "downstream_traffic_limit":1048576,
+    "upstream_traffic_limit":5242880,
+    "downstream_traffic_limit":10485760,
     "users":[{"user":"polevpn","pwd":"123456"}]
 
 }

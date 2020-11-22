@@ -43,7 +43,7 @@ func signalHandler() {
 func main() {
 
 	flag.Parse()
-
+	defer elog.Flush()
 	signalHandler()
 
 	go func() {

@@ -6,7 +6,7 @@ import (
 	"os/exec"
 
 	"github.com/polevpn/elog"
-	"github.com/songgao/water"
+	"github.com/polevpn/water"
 )
 
 type TunIO struct {
