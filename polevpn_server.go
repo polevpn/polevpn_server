@@ -37,11 +37,10 @@ func (ps *PoleVPNServer) Start(config *anyvalue.AnyValue) error {
 		return err
 	}
 
-	gwip1 := addresspool.GatewayIP1()
-	gwip2 := addresspool.GatewayIP2()
+	gwip := addresspool.GatewayIP()
 
-	elog.Infof("set tun device ip src:%v,ip dst: %v", gwip1, gwip2)
-	err = tunio.SetIPAddress(gwip1, gwip2)
+	elog.Infof("set tun device ip %v", gwip)
+	err = tunio.SetIPAddress(gwip)
 	if err != nil {
 		elog.Error("set tun ip address fail", err)
 		return err
@@ -53,8 +52,8 @@ func (ps *PoleVPNServer) Start(config *anyvalue.AnyValue) error {
 		elog.Error("enable tun fail", err)
 		return err
 	}
-	elog.Infof("add route %v to %v", addresspool.GetNetwork(), gwip2)
-	err = tunio.AddRoute(addresspool.GetNetwork(), gwip2)
+	elog.Infof("add route %v to %v", addresspool.GetNetwork(), gwip)
+	err = tunio.AddRoute(addresspool.GetNetwork(), gwip)
 	if err != nil {
 		elog.Error("set tun route fail", err)
 		return err

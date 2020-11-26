@@ -38,11 +38,11 @@ func NewTunIO(size int, handler *PacketDispatcher) (*TunIO, error) {
 	}, nil
 }
 
-// ip addr add dev tun0 local 10.8.0.1 peer 10.8.0.2
-// ip route add 10.8.0.0/24 via 10.8.0.2
-func (t *TunIO) SetIPAddress(ip1 string, ip2 string) error {
+// ip addr add dev tun0 local 10.8.0.1 peer 10.8.0.1
+// ip route add 10.8.0.0/24 via 10.8.0.1
+func (t *TunIO) SetIPAddress(ip1 string) error {
 
-	out, err := exec.Command("bash", "-c", "ip addr add dev "+t.ifce.Name()+" local "+ip1+" peer "+ip2).Output()
+	out, err := exec.Command("bash", "-c", "ip addr add dev "+t.ifce.Name()+" local "+ip1+" peer "+ip1).Output()
 
 	if err != nil {
 		return errors.New(err.Error() + "," + string(out))

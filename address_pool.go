@@ -8,8 +8,7 @@ import (
 type AddressPool struct {
 	pool    map[string]bool
 	mutex   *sync.Mutex
-	gw1     string
-	gw2     string
+	gw      string
 	network *net.IPNet
 }
 
@@ -21,7 +20,7 @@ func NewAddressPool(cidr string) (*AddressPool, error) {
 	}
 	networkipv4 := network.IP.To4()
 	start := net.IPv4(networkipv4[0], networkipv4[1], networkipv4[2], networkipv4[3]).To4()
-	var gw1, gw2 string
+	var gw string
 	pool := make(map[string]bool)
 
 	n, c := network.Mask.Size()
@@ -39,16 +38,12 @@ func NewAddressPool(cidr string) (*AddressPool, error) {
 			continue
 		}
 		if i == 1 {
-			gw1 = start.String()
-			continue
-		}
-		if i == 2 {
-			gw2 = start.String()
+			gw = start.String()
 			continue
 		}
 		pool[start.String()] = false
 	}
-	return &AddressPool{pool: pool, mutex: &sync.Mutex{}, gw1: gw1, gw2: gw2, network: network}, nil
+	return &AddressPool{pool: pool, mutex: &sync.Mutex{}, gw: gw, network: network}, nil
 }
 
 func (ap *AddressPool) Alloc() string {
@@ -62,12 +57,8 @@ func (ap *AddressPool) Alloc() string {
 	return ""
 }
 
-func (ap *AddressPool) GatewayIP1() string {
-	return ap.gw1
-}
-func (ap *AddressPool) GatewayIP2() string {
-
-	return ap.gw2
+func (ap *AddressPool) GatewayIP() string {
+	return ap.gw
 }
 
 func (ap *AddressPool) GetNetwork() string {
