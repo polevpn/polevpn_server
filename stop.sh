@@ -1,1 +1,1 @@
-kill `pgrep -f "poleserver"`
+kill `pgrep -f "polevpn_server"`

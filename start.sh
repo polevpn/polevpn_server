@@ -1,1 +1,1 @@
-nohup ./poleserver $* >> run.log 2>&1 &
+nohup ./polevpn_server $* >> run.log 2>&1 &
