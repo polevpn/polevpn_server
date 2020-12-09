@@ -2,10 +2,14 @@ package main
 
 import (
 	"io"
+	"math/rand"
 	"time"
 
 	"github.com/gorilla/websocket"
 	"github.com/polevpn/elog"
+	"github.com/polevpn/netstack/tcpip/header"
+	"github.com/polevpn/netstack/tcpip/transport/tcp"
+	"github.com/polevpn/netstack/tcpip/transport/udp"
 )
 
 const (
@@ -84,10 +88,30 @@ func (wsc *WebSocketConn) Read() {
 			ppkt := PolePacket(pkt)
 			if ppkt.Cmd() == CMD_C2S_IPDATA {
 				bytes, ltime := wsc.tfcounter.UPStreamCount(uint64(len(ppkt.Payload())))
-				if bytes > wsc.uplimit/10 {
+				if bytes > wsc.uplimit/(1000/TRAFFIC_LIMIT_INTERVAL) {
 					duration := ltime.Add(time.Millisecond * TRAFFIC_LIMIT_INTERVAL).Sub(time.Now())
 					if duration > 0 {
-						time.Sleep(duration)
+						drop := false
+						if len(wsc.wch) > CH_WEBSOCKET_WRITE_SIZE*0.75 {
+							ippkt := header.IPv4(ppkt.Payload())
+							if ippkt.Protocol() == uint8(tcp.ProtocolNumber) {
+								n := rand.Intn(5)
+								if n > 2 {
+									drop = true
+								}
+							} else if ippkt.Protocol() == uint8(udp.ProtocolNumber) {
+								udppkt := header.UDP(ippkt.Payload())
+								if udppkt.DestinationPort() != 53 {
+									drop = true
+								}
+							}
+						}
+
+						if drop {
+							continue
+						} else {
+							time.Sleep(duration)
+						}
 					}
 				}
 			}
@@ -116,10 +140,30 @@ func (wsc *WebSocketConn) Write() {
 		ppkt := PolePacket(pkt)
 		if ppkt.Cmd() == CMD_S2C_IPDATA {
 			bytes, ltime := wsc.tfcounter.DownStreamCount(uint64(len(ppkt.Payload())))
-			if bytes > wsc.downlimit/10 {
+			if bytes > wsc.downlimit/(1000/TRAFFIC_LIMIT_INTERVAL) {
 				duration := ltime.Add(time.Millisecond * TRAFFIC_LIMIT_INTERVAL).Sub(time.Now())
 				if duration > 0 {
-					time.Sleep(duration)
+					drop := false
+					if len(wsc.wch) > CH_WEBSOCKET_WRITE_SIZE*0.75 {
+						ippkt := header.IPv4(ppkt.Payload())
+						if ippkt.Protocol() == uint8(tcp.ProtocolNumber) {
+							n := rand.Intn(5)
+							if n > 2 {
+								drop = true
+							}
+						} else if ippkt.Protocol() == uint8(udp.ProtocolNumber) {
+							udppkt := header.UDP(ippkt.Payload())
+							if udppkt.SourcePort() != 53 {
+								drop = true
+							}
+						}
+					}
+
+					if drop {
+						continue
+					} else {
+						time.Sleep(duration)
+					}
 				}
 			}
 		}

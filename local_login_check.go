@@ -33,7 +33,7 @@ func (llc *LocalLoginChecker) CheckLogin(user string, pwd string) bool {
 	}
 }
 
-func (llc *LocalLoginChecker) checkLoginByToken(user string, pwd string) bool {
+func (llc *LocalLoginChecker) checkLoginByPassword(user string, pwd string) bool {
 	users := Config.Get("users").AsArray()
 
 	for _, u := range users {
@@ -47,7 +47,7 @@ func (llc *LocalLoginChecker) checkLoginByToken(user string, pwd string) bool {
 	return false
 }
 
-func (llc *LocalLoginChecker) checkLoginByPassword(user string, pwd string) bool {
+func (llc *LocalLoginChecker) checkLoginByToken(user string, pwd string) bool {
 
 	crypted, err := base64.StdEncoding.DecodeString(pwd)
 

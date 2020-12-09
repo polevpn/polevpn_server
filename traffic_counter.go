@@ -5,7 +5,7 @@ import (
 )
 
 const (
-	TRAFFIC_LIMIT_INTERVAL = 100
+	TRAFFIC_LIMIT_INTERVAL = 10
 )
 
 type TrafficCounter struct {
