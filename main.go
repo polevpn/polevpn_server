@@ -47,10 +47,10 @@ func main() {
 	signalHandler()
 
 	go func() {
-		for range time.NewTicker(time.Second * 5).C {
+		for range time.NewTicker(time.Minute).C {
 			m := runtime.MemStats{}
 			runtime.ReadMemStats(&m)
-			elog.Printf("mem=%v,go=%v", m.HeapAlloc, runtime.NumGoroutine())
+			elog.Printf("memory=%v,goroutines=%v", m.HeapAlloc, runtime.NumGoroutine())
 		}
 	}()
 

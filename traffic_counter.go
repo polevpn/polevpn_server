@@ -4,64 +4,42 @@ import (
 	"time"
 )
 
-const (
-	TRAFFIC_LIMIT_INTERVAL = 10
-)
-
 type TrafficCounter struct {
-	upIPbytes        uint64
-	downIPbytes      uint64
-	upIPbytesTotal   uint64
-	downIPbytesTotal uint64
-	upIPLastTime     time.Time
-	downIPLastTime   time.Time
+	IPbytes         uint64
+	IPbytesTotal    uint64
+	IPLastTime      time.Time
+	IPCountInterval time.Duration
 }
 
-func NewTrafficCounter() *TrafficCounter {
+func NewTrafficCounter(interval time.Duration) *TrafficCounter {
 	return &TrafficCounter{
-		upIPbytes:        0,
-		downIPbytes:      0,
-		upIPLastTime:     time.Now(),
-		downIPLastTime:   time.Now(),
-		upIPbytesTotal:   0,
-		downIPbytesTotal: 0,
+		IPbytes:         0,
+		IPLastTime:      time.Now(),
+		IPbytesTotal:    0,
+		IPCountInterval: interval,
 	}
 }
 
-func (tl *TrafficCounter) UPStreamCount(bytes uint64) (uint64, time.Time) {
+func (tl *TrafficCounter) StreamCount(bytes uint64) (uint64, time.Time) {
 
 	now := time.Now()
 
-	if now.Sub(tl.upIPLastTime) > time.Millisecond*TRAFFIC_LIMIT_INTERVAL {
-		tl.upIPbytes = 0
-		tl.upIPLastTime = time.Now()
+	if now.Sub(tl.IPLastTime) > tl.IPCountInterval {
+		tl.IPbytes = 0
+		tl.IPLastTime = time.Now()
 	}
 
-	tl.upIPbytes += bytes
-	tl.upIPbytesTotal += bytes
-	return tl.upIPbytes, tl.upIPLastTime
+	tl.IPbytes += bytes
+	tl.IPbytesTotal += bytes
+	return tl.IPbytes, tl.IPLastTime
 }
 
-func (tl *TrafficCounter) DownStreamCount(bytes uint64) (uint64, time.Time) {
-	now := time.Now()
+func (tl *TrafficCounter) StreamTotalBytes() uint64 {
 
-	if now.Sub(tl.downIPLastTime) > time.Millisecond*TRAFFIC_LIMIT_INTERVAL {
-		tl.downIPbytes = 0
-		tl.downIPLastTime = time.Now()
-	}
-
-	tl.downIPbytes += bytes
-	tl.downIPbytesTotal += bytes
-	return tl.downIPbytes, tl.downIPLastTime
-
+	return tl.IPbytesTotal
 }
 
-func (tl *TrafficCounter) DownStreamTotalBytes() uint64 {
+func (tl *TrafficCounter) StreamCountInterval() time.Duration {
 
-	return tl.downIPbytesTotal
-}
-
-func (tl *TrafficCounter) UPStreamTotalBytes() uint64 {
-
-	return tl.upIPbytesTotal
+	return tl.IPCountInterval
 }

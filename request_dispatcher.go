@@ -8,7 +8,6 @@ import (
 type RequestDispatcher struct {
 	tunio   *TunIO
 	connmgr *WebSocketConnMgr
-	count   int
 }
 
 func NewRequestDispatcher() *RequestDispatcher {
@@ -24,7 +23,7 @@ func (r *RequestDispatcher) SetWebSocketConnMgr(connmgr *WebSocketConnMgr) {
 	r.connmgr = connmgr
 }
 
-func (r *RequestDispatcher) Dispatch(pkt []byte, conn *WebSocketConn) {
+func (r *RequestDispatcher) OnRequest(pkt []byte, conn *WebSocketConn) {
 
 	ppkt := PolePacket(pkt)
 	switch ppkt.Cmd() {
@@ -37,14 +36,13 @@ func (r *RequestDispatcher) Dispatch(pkt []byte, conn *WebSocketConn) {
 		//elog.Info("received heart beat request", conn.String())
 		r.handleHeartBeat(ppkt, conn)
 	case CMD_CLIENT_CLOSED:
-		elog.Info("connection closed event from", conn.String())
-		r.handleClientClosed(ppkt, conn)
+		r.handleClientClose(ppkt, conn)
 	default:
 		elog.Error("invalid pkt cmd=", ppkt.Cmd())
 	}
 }
 
-func (r *RequestDispatcher) NewConnection(conn *WebSocketConn, user string, ip string) {
+func (r *RequestDispatcher) OnConnection(conn *WebSocketConn, user string, ip string) {
 	if ip != "" {
 		oldconn := r.connmgr.GetWebSocketConnByIP(ip)
 		if oldconn != nil {
@@ -99,19 +97,22 @@ func (r *RequestDispatcher) handleHeartBeat(pkt PolePacket, conn *WebSocketConn)
 	resppkt.SetSeq(pkt.Seq())
 	conn.Send(resppkt)
 	r.connmgr.UpdateConnActiveTime(conn)
-	// r.count++
-	// if r.count%2 == 0 {
-	// 	conn.Close(true)
-	// }
 }
 
-func (r *RequestDispatcher) handleClientClosed(pkt PolePacket, conn *WebSocketConn) {
+func (r *RequestDispatcher) handleClientClose(pkt PolePacket, conn *WebSocketConn) {
+	elog.Info(conn.String(), "proactive close")
+	r.connmgr.RelelaseAddress(r.connmgr.GeIPByWebsocketConn(conn))
+}
+
+func (r *RequestDispatcher) OnClosed(conn *WebSocketConn, proactive bool) {
+
+	elog.Info("connection closed event from", conn.String())
 
 	r.connmgr.DetachIPAddress(conn)
 	r.connmgr.DetachUserFromConn(conn)
 
-	//just process motive close event
-	if pkt.Seq() == 1 {
+	//just process proactive close event
+	if proactive {
 		elog.Info(conn.String(), "proactive close")
 		r.connmgr.RelelaseAddress(r.connmgr.GeIPByWebsocketConn(conn))
 	}

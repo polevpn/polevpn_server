@@ -1,6 +1,6 @@
 {
-    "listen":"0.0.0.0:443",
-    "tls_mode":true,
+    "listen":"0.0.0.0:80",
+    "tls_mode":false,
     "cert_file":"./keys/server.crt",
     "key_file":"./keys/server.key",
     "endpoint":"/ws",

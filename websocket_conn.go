@@ -13,28 +13,31 @@ import (
 )
 
 const (
-	CH_WEBSOCKET_WRITE_SIZE = 2048
+	CH_WEBSOCKET_WRITE_SIZE = 2000
+	TRAFFIC_LIMIT_INTERVAL  = 20
 )
 
 type WebSocketConn struct {
-	conn      *websocket.Conn
-	wch       chan []byte
-	closed    bool
-	handler   *RequestDispatcher
-	downlimit uint64
-	uplimit   uint64
-	tfcounter *TrafficCounter
+	conn         *websocket.Conn
+	wch          chan []byte
+	closed       bool
+	handler      *RequestDispatcher
+	downlimit    uint64
+	uplimit      uint64
+	tcDownStream *TrafficCounter
+	tcUpStream   *TrafficCounter
 }
 
 func NewWebSocketConn(conn *websocket.Conn, downlimit uint64, uplimit uint64, handler *RequestDispatcher) *WebSocketConn {
 	return &WebSocketConn{
-		conn:      conn,
-		closed:    false,
-		wch:       make(chan []byte, CH_WEBSOCKET_WRITE_SIZE),
-		handler:   handler,
-		downlimit: downlimit,
-		uplimit:   uplimit,
-		tfcounter: NewTrafficCounter(),
+		conn:         conn,
+		closed:       false,
+		wch:          make(chan []byte, CH_WEBSOCKET_WRITE_SIZE),
+		handler:      handler,
+		downlimit:    downlimit,
+		uplimit:      uplimit,
+		tcDownStream: NewTrafficCounter(TRAFFIC_LIMIT_INTERVAL * time.Millisecond),
+		tcUpStream:   NewTrafficCounter(TRAFFIC_LIMIT_INTERVAL * time.Millisecond),
 	}
 }
 
@@ -47,10 +50,7 @@ func (wsc *WebSocketConn) Close(flag bool) error {
 		}
 		err := wsc.conn.Close()
 		if flag {
-			pkt := make([]byte, POLE_PACKET_HEADER_LEN)
-			PolePacket(pkt).SetCmd(CMD_CLIENT_CLOSED)
-			PolePacket(pkt).SetSeq(0)
-			go wsc.handler.Dispatch(pkt, wsc)
+			go wsc.handler.OnClosed(wsc, false)
 		}
 		return err
 	}
@@ -58,11 +58,42 @@ func (wsc *WebSocketConn) Close(flag bool) error {
 }
 
 func (wsc *WebSocketConn) String() string {
-	return wsc.conn.LocalAddr().String() + "->" + wsc.conn.RemoteAddr().String()
+	return wsc.conn.RemoteAddr().String() + "->" + wsc.conn.LocalAddr().String()
 }
 
 func (wsc *WebSocketConn) IsClosed() bool {
 	return wsc.closed
+}
+
+func (wsc *WebSocketConn) checkStreamLimit(pkt []byte, tfcounter *TrafficCounter, limit uint64) (bool, time.Duration) {
+	bytes, ltime := tfcounter.StreamCount(uint64(len(pkt)))
+	if bytes > limit/(1000/uint64(tfcounter.StreamCountInterval()/time.Millisecond)) {
+		duration := ltime.Add(tfcounter.StreamCountInterval()).Sub(time.Now())
+		if duration > 0 {
+			drop := false
+			if len(wsc.wch) > CH_WEBSOCKET_WRITE_SIZE*0.01 {
+				ippkt := header.IPv4(pkt)
+				if ippkt.Protocol() == uint8(tcp.ProtocolNumber) {
+					n := rand.Intn(5)
+					if n > 2 {
+						drop = true
+					}
+				} else if ippkt.Protocol() == uint8(udp.ProtocolNumber) {
+					udppkt := header.UDP(ippkt.Payload())
+					if udppkt.DestinationPort() != 53 && udppkt.SourcePort() != 53 {
+						drop = true
+					}
+				}
+			}
+
+			if drop {
+				return true, 0
+			} else {
+				return true, duration
+			}
+		}
+	}
+	return false, 0
 }
 
 func (wsc *WebSocketConn) Read() {
@@ -84,38 +115,19 @@ func (wsc *WebSocketConn) Read() {
 		}
 		if mtype == websocket.BinaryMessage {
 
-			//traffic limit
 			ppkt := PolePacket(pkt)
 			if ppkt.Cmd() == CMD_C2S_IPDATA {
-				bytes, ltime := wsc.tfcounter.UPStreamCount(uint64(len(ppkt.Payload())))
-				if bytes > wsc.uplimit/(1000/TRAFFIC_LIMIT_INTERVAL) {
-					duration := ltime.Add(time.Millisecond * TRAFFIC_LIMIT_INTERVAL).Sub(time.Now())
+				//traffic limit
+				limit, duration := wsc.checkStreamLimit(ppkt.Payload(), wsc.tcUpStream, wsc.uplimit)
+				if limit {
 					if duration > 0 {
-						drop := false
-						if len(wsc.wch) > CH_WEBSOCKET_WRITE_SIZE*0.75 {
-							ippkt := header.IPv4(ppkt.Payload())
-							if ippkt.Protocol() == uint8(tcp.ProtocolNumber) {
-								n := rand.Intn(5)
-								if n > 2 {
-									drop = true
-								}
-							} else if ippkt.Protocol() == uint8(udp.ProtocolNumber) {
-								udppkt := header.UDP(ippkt.Payload())
-								if udppkt.DestinationPort() != 53 {
-									drop = true
-								}
-							}
-						}
-
-						if drop {
-							continue
-						} else {
-							time.Sleep(duration)
-						}
+						time.Sleep(duration)
+					} else {
+						continue
 					}
 				}
 			}
-			wsc.handler.Dispatch(pkt, wsc)
+			wsc.handler.OnRequest(pkt, wsc)
 		}
 	}
 
@@ -136,38 +148,18 @@ func (wsc *WebSocketConn) Write() {
 			return
 		}
 
-		//traffic limit
 		ppkt := PolePacket(pkt)
 		if ppkt.Cmd() == CMD_S2C_IPDATA {
-			bytes, ltime := wsc.tfcounter.DownStreamCount(uint64(len(ppkt.Payload())))
-			if bytes > wsc.downlimit/(1000/TRAFFIC_LIMIT_INTERVAL) {
-				duration := ltime.Add(time.Millisecond * TRAFFIC_LIMIT_INTERVAL).Sub(time.Now())
+			//traffic limit
+			limit, duration := wsc.checkStreamLimit(ppkt.Payload(), wsc.tcDownStream, wsc.downlimit)
+			if limit {
 				if duration > 0 {
-					drop := false
-					if len(wsc.wch) > CH_WEBSOCKET_WRITE_SIZE*0.75 {
-						ippkt := header.IPv4(ppkt.Payload())
-						if ippkt.Protocol() == uint8(tcp.ProtocolNumber) {
-							n := rand.Intn(5)
-							if n > 2 {
-								drop = true
-							}
-						} else if ippkt.Protocol() == uint8(udp.ProtocolNumber) {
-							udppkt := header.UDP(ippkt.Payload())
-							if udppkt.SourcePort() != 53 {
-								drop = true
-							}
-						}
-					}
-
-					if drop {
-						continue
-					} else {
-						time.Sleep(duration)
-					}
+					time.Sleep(duration)
+				} else {
+					continue
 				}
 			}
 		}
-
 		err := wsc.conn.WriteMessage(websocket.BinaryMessage, pkt)
 		if err != nil {
 			if err == io.EOF || err == io.ErrUnexpectedEOF {
@@ -177,7 +169,6 @@ func (wsc *WebSocketConn) Write() {
 			}
 			return
 		}
-
 	}
 }
 

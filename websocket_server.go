@@ -31,6 +31,7 @@ func (wss *WebSocketServer) SetLoginCheckHandler(loginchecker LoginChecker) {
 }
 
 func (wss *WebSocketServer) Listen(addr string, path string) error {
+	http.HandleFunc("/", wss.defaultHandler)
 	http.HandleFunc(path, wss.wsHandler)
 	err := http.ListenAndServe(addr, nil)
 
@@ -113,7 +114,7 @@ func (wss *WebSocketServer) wsHandler(w http.ResponseWriter, r *http.Request) {
 
 	if wss.handler != nil {
 		wsconn := NewWebSocketConn(conn, wss.downlimit, wss.uplimit, wss.handler)
-		wss.handler.NewConnection(wsconn, user, ip)
+		wss.handler.OnConnection(wsconn, user, ip)
 		go wsconn.Read()
 		go wsconn.Write()
 	} else {
