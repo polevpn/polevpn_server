@@ -14,7 +14,7 @@ import (
 
 const (
 	CH_WEBSOCKET_WRITE_SIZE = 2000
-	TRAFFIC_LIMIT_INTERVAL  = 20
+	TRAFFIC_LIMIT_INTERVAL  = 10
 )
 
 type WebSocketConn struct {
@@ -71,7 +71,7 @@ func (wsc *WebSocketConn) checkStreamLimit(pkt []byte, tfcounter *TrafficCounter
 		duration := ltime.Add(tfcounter.StreamCountInterval()).Sub(time.Now())
 		if duration > 0 {
 			drop := false
-			if len(wsc.wch) > CH_WEBSOCKET_WRITE_SIZE*0.01 {
+			if len(wsc.wch) > CH_WEBSOCKET_WRITE_SIZE*0.5 {
 				ippkt := header.IPv4(pkt)
 				if ippkt.Protocol() == uint8(tcp.ProtocolNumber) {
 					n := rand.Intn(5)
