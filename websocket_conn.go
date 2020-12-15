@@ -21,14 +21,14 @@ type WebSocketConn struct {
 	conn         *websocket.Conn
 	wch          chan []byte
 	closed       bool
-	handler      *RequestDispatcher
+	handler      *WSRequestHandler
 	downlimit    uint64
 	uplimit      uint64
 	tcDownStream *TrafficCounter
 	tcUpStream   *TrafficCounter
 }
 
-func NewWebSocketConn(conn *websocket.Conn, downlimit uint64, uplimit uint64, handler *RequestDispatcher) *WebSocketConn {
+func NewWebSocketConn(conn *websocket.Conn, downlimit uint64, uplimit uint64, handler *WSRequestHandler) *WebSocketConn {
 	return &WebSocketConn{
 		conn:         conn,
 		closed:       false,
@@ -63,21 +63,6 @@ func (wsc *WebSocketConn) String() string {
 
 func (wsc *WebSocketConn) IsClosed() bool {
 	return wsc.closed
-}
-
-func (wsc *WebSocketConn) checkBtDownloadPort(pkt []byte) bool {
-	ippkt := header.IPv4(pkt)
-	if ippkt.Protocol() == uint8(tcp.ProtocolNumber) {
-		tcppkt := header.TCP(ippkt.Payload())
-		port := tcppkt.SourcePort()
-		//disable bt && xunlei
-		if port >= 6880 && port <= 6890 {
-			return true
-		} else if port == 3076 || port == 3077 || port == 3078 || port == 5200 || port == 6200 {
-			return true
-		}
-	}
-	return false
 }
 
 func (wsc *WebSocketConn) checkStreamLimit(pkt []byte, tfcounter *TrafficCounter, limit uint64) (bool, time.Duration) {
@@ -165,10 +150,6 @@ func (wsc *WebSocketConn) Write() {
 
 		ppkt := PolePacket(pkt)
 		if ppkt.Cmd() == CMD_S2C_IPDATA {
-
-			if wsc.checkBtDownloadPort(ppkt.Payload()) {
-				continue
-			}
 			//traffic limit
 			limit, duration := wsc.checkStreamLimit(ppkt.Payload(), wsc.tcDownStream, wsc.downlimit)
 			if limit {

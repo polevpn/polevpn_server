@@ -12,8 +12,8 @@ const (
 	CHECK_TIMEOUT_INTEVAL = 5
 )
 
-type WebSocketConnMgr struct {
-	ip2conns    map[string]*WebSocketConn
+type ConnMgr struct {
+	ip2conns    map[string]Conn
 	conn2ips    map[string]string
 	ip2actives  map[string]time.Time
 	ip2users    map[string]string
@@ -22,38 +22,38 @@ type WebSocketConnMgr struct {
 	addresspool *AddressPool
 }
 
-func NewWebSocketConnMgr() *WebSocketConnMgr {
-	wscm := &WebSocketConnMgr{
-		ip2conns:   make(map[string]*WebSocketConn),
+func NewConnMgr() *ConnMgr {
+	cm := &ConnMgr{
+		ip2conns:   make(map[string]Conn),
 		mutex:      &sync.Mutex{},
 		conn2ips:   make(map[string]string),
 		ip2actives: make(map[string]time.Time),
 		ip2users:   make(map[string]string),
 		conn2users: make(map[string]string),
 	}
-	go wscm.CheckTimeout()
-	return wscm
+	go cm.CheckTimeout()
+	return cm
 }
 
-func (wscm *WebSocketConnMgr) CheckTimeout() {
+func (cm *ConnMgr) CheckTimeout() {
 	for range time.NewTicker(time.Second * CHECK_TIMEOUT_INTEVAL).C {
 		timeNow := time.Now()
 		iplist := make([]string, 0)
-		wscm.mutex.Lock()
-		for ip, lastActive := range wscm.ip2actives {
+		cm.mutex.Lock()
+		for ip, lastActive := range cm.ip2actives {
 			if timeNow.Sub(lastActive) > time.Minute*CONNECTION_TIMEOUT {
 				iplist = append(iplist, ip)
 
 			}
 		}
-		wscm.mutex.Unlock()
+		cm.mutex.Unlock()
 
 		for _, ip := range iplist {
-			wscm.RelelaseAddress(ip)
-			conn := wscm.GetWebSocketConnByIP(ip)
+			cm.RelelaseAddress(ip)
+			conn := cm.GetConnByIP(ip)
 			if conn != nil {
-				wscm.DetachIPAddress(conn)
-				wscm.DetachUserFromConn(conn)
+				cm.DetachIPAddressFromConn(conn)
+				cm.DetachUserFromConn(conn)
 				conn.Close(false)
 			}
 		}
@@ -61,134 +61,134 @@ func (wscm *WebSocketConnMgr) CheckTimeout() {
 	}
 }
 
-func (wscm *WebSocketConnMgr) SetAddressPool(addrespool *AddressPool) {
-	wscm.addresspool = addrespool
+func (cm *ConnMgr) SetAddressPool(addrespool *AddressPool) {
+	cm.addresspool = addrespool
 }
 
-func (wscm *WebSocketConnMgr) AllocAddress() string {
+func (cm *ConnMgr) AllocAddress() string {
 
-	wscm.mutex.Lock()
-	defer wscm.mutex.Unlock()
+	cm.mutex.Lock()
+	defer cm.mutex.Unlock()
 
-	if wscm.addresspool == nil {
+	if cm.addresspool == nil {
 		elog.Error("address pool haven't set")
 		return ""
 	}
-	ip := wscm.addresspool.Alloc()
+	ip := cm.addresspool.Alloc()
 	if ip != "" {
-		wscm.ip2actives[ip] = time.Now()
+		cm.ip2actives[ip] = time.Now()
 	}
 	return ip
 }
 
-func (wscm *WebSocketConnMgr) RelelaseAddress(ip string) {
+func (cm *ConnMgr) RelelaseAddress(ip string) {
 
-	wscm.mutex.Lock()
-	defer wscm.mutex.Unlock()
+	cm.mutex.Lock()
+	defer cm.mutex.Unlock()
 
-	if wscm.addresspool == nil {
+	if cm.addresspool == nil {
 		return
 	}
-	delete(wscm.ip2actives, ip)
-	wscm.addresspool.Release(ip)
+	delete(cm.ip2actives, ip)
+	cm.addresspool.Release(ip)
 }
 
-func (wscm *WebSocketConnMgr) IsAllocedAddress(ip string) bool {
+func (cm *ConnMgr) IsAllocedAddress(ip string) bool {
 
-	wscm.mutex.Lock()
-	defer wscm.mutex.Unlock()
+	cm.mutex.Lock()
+	defer cm.mutex.Unlock()
 
-	if wscm.addresspool == nil {
+	if cm.addresspool == nil {
 		return false
 	}
-	return wscm.addresspool.IsAlloc(ip)
+	return cm.addresspool.IsAlloc(ip)
 }
 
-func (wscm *WebSocketConnMgr) UpdateConnActiveTime(conn *WebSocketConn) {
+func (cm *ConnMgr) UpdateConnActiveTime(conn Conn) {
 
-	wscm.mutex.Lock()
-	defer wscm.mutex.Unlock()
-	ip, ok := wscm.conn2ips[conn.String()]
+	cm.mutex.Lock()
+	defer cm.mutex.Unlock()
+	ip, ok := cm.conn2ips[conn.String()]
 	if ok {
-		wscm.ip2actives[ip] = time.Now()
+		cm.ip2actives[ip] = time.Now()
 	}
 }
 
-func (wscm *WebSocketConnMgr) AttachIPAddress(ip string, conn *WebSocketConn) {
-	wscm.mutex.Lock()
-	defer wscm.mutex.Unlock()
-	sconn, ok := wscm.ip2conns[ip]
+func (cm *ConnMgr) AttachIPAddressToConn(ip string, conn Conn) {
+	cm.mutex.Lock()
+	defer cm.mutex.Unlock()
+	sconn, ok := cm.ip2conns[ip]
 	if ok {
-		delete(wscm.conn2ips, sconn.String())
+		delete(cm.conn2ips, sconn.String())
 	}
-	wscm.ip2conns[ip] = conn
-	wscm.conn2ips[conn.String()] = ip
+	cm.ip2conns[ip] = conn
+	cm.conn2ips[conn.String()] = ip
 }
 
-func (wscm *WebSocketConnMgr) IsDetached(ip string) bool {
-	wscm.mutex.Lock()
-	defer wscm.mutex.Unlock()
-	_, ok := wscm.ip2conns[ip]
+func (cm *ConnMgr) IsDetached(ip string) bool {
+	cm.mutex.Lock()
+	defer cm.mutex.Unlock()
+	_, ok := cm.ip2conns[ip]
 	return ok
 }
 
-func (wscm *WebSocketConnMgr) DetachIPAddress(conn *WebSocketConn) {
-	wscm.mutex.Lock()
-	defer wscm.mutex.Unlock()
-	ip, ok := wscm.conn2ips[conn.String()]
+func (cm *ConnMgr) DetachIPAddressFromConn(conn Conn) {
+	cm.mutex.Lock()
+	defer cm.mutex.Unlock()
+	ip, ok := cm.conn2ips[conn.String()]
 	if ok {
-		sconn, ok := wscm.ip2conns[ip]
+		sconn, ok := cm.ip2conns[ip]
 		if ok && sconn.String() == conn.String() {
-			delete(wscm.ip2conns, ip)
+			delete(cm.ip2conns, ip)
 		}
-		delete(wscm.conn2ips, conn.String())
+		delete(cm.conn2ips, conn.String())
 	}
 }
 
-func (wscm *WebSocketConnMgr) AttachUserToConn(user string, conn *WebSocketConn) {
-	wscm.mutex.Lock()
-	defer wscm.mutex.Unlock()
-	wscm.conn2users[conn.String()] = user
+func (cm *ConnMgr) AttachUserToConn(user string, conn Conn) {
+	cm.mutex.Lock()
+	defer cm.mutex.Unlock()
+	cm.conn2users[conn.String()] = user
 }
 
-func (wscm *WebSocketConnMgr) DetachUserFromConn(conn *WebSocketConn) {
-	wscm.mutex.Lock()
-	defer wscm.mutex.Unlock()
-	delete(wscm.conn2users, conn.String())
+func (cm *ConnMgr) DetachUserFromConn(conn Conn) {
+	cm.mutex.Lock()
+	defer cm.mutex.Unlock()
+	delete(cm.conn2users, conn.String())
 }
 
-func (wscm *WebSocketConnMgr) GetConnAttachUser(conn *WebSocketConn) string {
-	wscm.mutex.Lock()
-	defer wscm.mutex.Unlock()
-	return wscm.conn2users[conn.String()]
+func (cm *ConnMgr) GetConnAttachUser(conn Conn) string {
+	cm.mutex.Lock()
+	defer cm.mutex.Unlock()
+	return cm.conn2users[conn.String()]
 }
 
-func (wscm *WebSocketConnMgr) AttachUserToIP(user string, ip string) {
-	wscm.mutex.Lock()
-	defer wscm.mutex.Unlock()
-	wscm.ip2users[ip] = user
+func (cm *ConnMgr) AttachUserToIP(user string, ip string) {
+	cm.mutex.Lock()
+	defer cm.mutex.Unlock()
+	cm.ip2users[ip] = user
 }
 
-func (wscm *WebSocketConnMgr) DetachUserFromIP(ip string) {
-	wscm.mutex.Lock()
-	defer wscm.mutex.Unlock()
-	delete(wscm.ip2users, ip)
+func (cm *ConnMgr) DetachUserFromIP(ip string) {
+	cm.mutex.Lock()
+	defer cm.mutex.Unlock()
+	delete(cm.ip2users, ip)
 }
 
-func (wscm *WebSocketConnMgr) GetIPAttachUser(ip string) string {
-	wscm.mutex.Lock()
-	defer wscm.mutex.Unlock()
-	return wscm.ip2users[ip]
+func (cm *ConnMgr) GetIPAttachUser(ip string) string {
+	cm.mutex.Lock()
+	defer cm.mutex.Unlock()
+	return cm.ip2users[ip]
 }
 
-func (wscm *WebSocketConnMgr) GetWebSocketConnByIP(ip string) *WebSocketConn {
-	wscm.mutex.Lock()
-	defer wscm.mutex.Unlock()
-	return wscm.ip2conns[ip]
+func (cm *ConnMgr) GetConnByIP(ip string) Conn {
+	cm.mutex.Lock()
+	defer cm.mutex.Unlock()
+	return cm.ip2conns[ip]
 }
 
-func (wscm *WebSocketConnMgr) GeIPByWebsocketConn(conn *WebSocketConn) string {
-	wscm.mutex.Lock()
-	defer wscm.mutex.Unlock()
-	return wscm.conn2ips[conn.String()]
+func (cm *ConnMgr) GeIPByConn(conn Conn) string {
+	cm.mutex.Lock()
+	defer cm.mutex.Unlock()
+	return cm.conn2ips[conn.String()]
 }

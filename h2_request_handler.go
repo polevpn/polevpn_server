@@ -5,25 +5,25 @@ import (
 	"github.com/polevpn/elog"
 )
 
-type RequestDispatcher struct {
+type H2RequestHandler struct {
 	tunio   *TunIO
-	connmgr *WebSocketConnMgr
+	connmgr *ConnMgr
 }
 
-func NewRequestDispatcher() *RequestDispatcher {
+func NewH2RequestHandler() *H2RequestHandler {
 
-	return &RequestDispatcher{}
+	return &H2RequestHandler{}
 }
 
-func (r *RequestDispatcher) SetTunIO(tunio *TunIO) {
+func (r *H2RequestHandler) SetTunIO(tunio *TunIO) {
 	r.tunio = tunio
 }
 
-func (r *RequestDispatcher) SetWebSocketConnMgr(connmgr *WebSocketConnMgr) {
+func (r *H2RequestHandler) SetConnMgr(connmgr *ConnMgr) {
 	r.connmgr = connmgr
 }
 
-func (r *RequestDispatcher) OnRequest(pkt []byte, conn *WebSocketConn) {
+func (r *H2RequestHandler) OnRequest(pkt []byte, conn *Http2Conn) {
 
 	ppkt := PolePacket(pkt)
 	switch ppkt.Cmd() {
@@ -42,13 +42,13 @@ func (r *RequestDispatcher) OnRequest(pkt []byte, conn *WebSocketConn) {
 	}
 }
 
-func (r *RequestDispatcher) OnConnection(conn *WebSocketConn, user string, ip string) {
+func (r *H2RequestHandler) OnConnection(conn *Http2Conn, user string, ip string) {
 	if ip != "" {
-		oldconn := r.connmgr.GetWebSocketConnByIP(ip)
+		oldconn := r.connmgr.GetConnByIP(ip)
 		if oldconn != nil {
 			oldconn.Close(true)
 		}
-		r.connmgr.AttachIPAddress(ip, conn)
+		r.connmgr.AttachIPAddressToConn(ip, conn)
 		elog.Infof("from %v,ip:%v reconnect ok", conn.String(), ip)
 
 	}
@@ -56,7 +56,7 @@ func (r *RequestDispatcher) OnConnection(conn *WebSocketConn, user string, ip st
 
 }
 
-func (r *RequestDispatcher) handleAllocIPAddress(pkt PolePacket, conn *WebSocketConn) {
+func (r *H2RequestHandler) handleAllocIPAddress(pkt PolePacket, conn *Http2Conn) {
 	av := anyvalue.New()
 
 	ip := r.connmgr.AllocAddress()
@@ -71,16 +71,17 @@ func (r *RequestDispatcher) handleAllocIPAddress(pkt PolePacket, conn *WebSocket
 	buf := make([]byte, POLE_PACKET_HEADER_LEN+len(body))
 	copy(buf[POLE_PACKET_HEADER_LEN:], body)
 	resppkt := PolePacket(buf)
+	resppkt.SetLen(uint16(len(buf)))
 	resppkt.SetCmd(pkt.Cmd())
 	resppkt.SetSeq(pkt.Seq())
 	conn.Send(resppkt)
 	if ip != "" {
-		r.connmgr.AttachIPAddress(ip, conn)
+		r.connmgr.AttachIPAddressToConn(ip, conn)
 		r.connmgr.AttachUserToIP(r.connmgr.GetConnAttachUser(conn), ip)
 	}
 }
 
-func (r *RequestDispatcher) handleC2SIPData(pkt PolePacket, conn *WebSocketConn) {
+func (r *H2RequestHandler) handleC2SIPData(pkt PolePacket, conn *Http2Conn) {
 
 	if r.tunio != nil {
 		err := r.tunio.Enqueue(pkt[POLE_PACKET_HEADER_LEN:])
@@ -90,31 +91,32 @@ func (r *RequestDispatcher) handleC2SIPData(pkt PolePacket, conn *WebSocketConn)
 	}
 }
 
-func (r *RequestDispatcher) handleHeartBeat(pkt PolePacket, conn *WebSocketConn) {
+func (r *H2RequestHandler) handleHeartBeat(pkt PolePacket, conn *Http2Conn) {
 	buf := make([]byte, POLE_PACKET_HEADER_LEN)
 	resppkt := PolePacket(buf)
+	resppkt.SetLen(POLE_PACKET_HEADER_LEN)
 	resppkt.SetCmd(CMD_HEART_BEAT)
 	resppkt.SetSeq(pkt.Seq())
 	conn.Send(resppkt)
 	r.connmgr.UpdateConnActiveTime(conn)
 }
 
-func (r *RequestDispatcher) handleClientClose(pkt PolePacket, conn *WebSocketConn) {
+func (r *H2RequestHandler) handleClientClose(pkt PolePacket, conn *Http2Conn) {
 	elog.Info(conn.String(), "proactive close")
-	r.connmgr.RelelaseAddress(r.connmgr.GeIPByWebsocketConn(conn))
+	r.connmgr.RelelaseAddress(r.connmgr.GeIPByConn(conn))
 }
 
-func (r *RequestDispatcher) OnClosed(conn *WebSocketConn, proactive bool) {
+func (r *H2RequestHandler) OnClosed(conn *Http2Conn, proactive bool) {
 
 	elog.Info("connection closed event from", conn.String())
 
-	r.connmgr.DetachIPAddress(conn)
+	r.connmgr.DetachIPAddressFromConn(conn)
 	r.connmgr.DetachUserFromConn(conn)
 
 	//just process proactive close event
 	if proactive {
 		elog.Info(conn.String(), "proactive close")
-		r.connmgr.RelelaseAddress(r.connmgr.GeIPByWebsocketConn(conn))
+		r.connmgr.RelelaseAddress(r.connmgr.GeIPByConn(conn))
 	}
 
 }

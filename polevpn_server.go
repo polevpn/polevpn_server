@@ -22,13 +22,13 @@ func (ps *PoleVPNServer) Start(config *anyvalue.AnyValue) error {
 		return err
 	}
 
-	connmgr := NewWebSocketConnMgr()
+	connmgr := NewConnMgr()
 
 	connmgr.SetAddressPool(addresspool)
 
 	packetHandler := NewPacketDispatcher()
 
-	packetHandler.SetWebSocketConnMgr(connmgr)
+	packetHandler.SetConnMgr(connmgr)
 
 	tunio, err := NewTunIO(CH_TUNIO_WRITE_SIZE, packetHandler)
 
@@ -62,28 +62,33 @@ func (ps *PoleVPNServer) Start(config *anyvalue.AnyValue) error {
 	tunio.StartProcess()
 
 	loginchecker := NewLocalLoginChecker()
-	requestHandler := NewRequestDispatcher()
-	requestHandler.SetTunIO(tunio)
-	requestHandler.SetWebSocketConnMgr(connmgr)
+	wsRequestHandler := NewWSRequestHandler()
+	wsRequestHandler.SetTunIO(tunio)
+	wsRequestHandler.SetConnMgr(connmgr)
+
+	h2RequestHandler := NewH2RequestHandler()
+	h2RequestHandler.SetTunIO(tunio)
+	h2RequestHandler.SetConnMgr(connmgr)
 
 	upstream := config.Get("upstream_traffic_limit").AsUint64()
 	downstream := config.Get("downstream_traffic_limit").AsUint64()
 
-	wserver := NewWebSocketServer(upstream, downstream, requestHandler)
-	wserver.SetLoginCheckHandler(loginchecker)
+	httpServer := NewHttpServer(upstream, downstream, wsRequestHandler, h2RequestHandler)
+	httpServer.SetLoginCheckHandler(loginchecker)
 
-	elog.Infof("listen %v,endpoint %v", config.Get("listen").AsStr(), config.Get("endpoint").AsStr())
+	elog.Infof("listen %v,ws %v,h2 %v", config.Get("http.listen").AsStr(), config.Get("http.ws_path").AsStr(), config.Get("http.h2_path").AsStr())
 
-	if config.Get("tls_mode").AsBool() == true {
-		err = wserver.ListenTLS(
-			config.Get("listen").AsStr(),
-			config.Get("cert_file").AsStr(),
-			config.Get("key_file").AsStr(),
-			config.Get("endpoint").AsStr(),
+	if config.Get("http.tls_mode").AsBool() == true {
+		err = httpServer.ListenTLS(
+			config.Get("http.listen").AsStr(),
+			config.Get("http.cert_file").AsStr(),
+			config.Get("http.key_file").AsStr(),
+			config.Get("http.ws_path").AsStr(),
+			config.Get("http.h2_path").AsStr(),
 		)
 
 	} else {
-		err = wserver.Listen(config.Get("listen").AsStr(), config.Get("endpoint").AsStr())
+		err = httpServer.Listen(config.Get("http.listen").AsStr(), config.Get("http.ws_path").AsStr(), config.Get("http.h2_path").AsStr())
 	}
 
 	if err != nil {

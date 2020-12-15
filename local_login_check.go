@@ -34,7 +34,7 @@ func (llc *LocalLoginChecker) CheckLogin(user string, pwd string) bool {
 }
 
 func (llc *LocalLoginChecker) checkLoginByPassword(user string, pwd string) bool {
-	users := Config.Get("users").AsArray()
+	users := Config.Get("auth.local.users").AsArray()
 
 	for _, u := range users {
 		u, ok := u.(map[string]interface{})
