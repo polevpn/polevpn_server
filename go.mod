@@ -11,5 +11,6 @@ require (
 	github.com/polevpn/h2conn v1.0.3
 	github.com/polevpn/netstack v1.0.0
 	github.com/polevpn/water v1.0.1
+	github.com/polevpn/xnet v1.0.0
 	golang.org/x/time v0.0.0-20200630173020-3af7569d3a1e // indirect
 )

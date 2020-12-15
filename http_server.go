@@ -7,6 +7,8 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/polevpn/elog"
 	"github.com/polevpn/h2conn"
+	"github.com/polevpn/xnet/http2"
+	"github.com/polevpn/xnet/http2/h2c"
 )
 
 type HttpServer struct {
@@ -35,16 +37,26 @@ func (hs *HttpServer) SetLoginCheckHandler(loginchecker LoginChecker) {
 }
 
 func (hs *HttpServer) Listen(addr string, wsPath string, h2Path string) error {
-	http.HandleFunc("/", hs.defaultHandler)
-	http.HandleFunc(wsPath, hs.wsHandler)
-	http.HandleFunc(h2Path, hs.h2Handler)
 
-	err := http.ListenAndServe(addr, nil)
+	h2s := &http2.Server{}
 
-	if err != nil {
-		return err
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == wsPath {
+			hs.wsHandler(w, r)
+		} else if r.URL.Path == h2Path {
+			hs.h2Handler(w, r)
+		} else {
+			hs.defaultHandler(w, r)
+		}
+	})
+
+	server := &http.Server{
+		Addr:    addr,
+		Handler: h2c.NewHandler(handler, h2s),
 	}
-	return nil
+
+	return server.ListenAndServe()
+
 }
 
 func (hs *HttpServer) defaultHandler(w http.ResponseWriter, r *http.Request) {
@@ -56,12 +68,7 @@ func (hs *HttpServer) ListenTLS(addr string, certFile string, keyFile string, ws
 	http.HandleFunc(wsPath, hs.wsHandler)
 	http.HandleFunc(h2Path, hs.h2Handler)
 
-	err := http.ListenAndServeTLS(addr, certFile, keyFile, nil)
-
-	if err != nil {
-		return err
-	}
-	return nil
+	return http.ListenAndServeTLS(addr, certFile, keyFile, nil)
 }
 
 func (hs *HttpServer) respError(status int, w http.ResponseWriter) {
