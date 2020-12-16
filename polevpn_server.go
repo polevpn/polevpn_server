@@ -62,21 +62,21 @@ func (ps *PoleVPNServer) Start(config *anyvalue.AnyValue) error {
 	tunio.StartProcess()
 
 	loginchecker := NewLocalLoginChecker()
-	wsRequestHandler := NewWSRequestHandler()
-	wsRequestHandler.SetTunIO(tunio)
-	wsRequestHandler.SetConnMgr(connmgr)
-
-	h2RequestHandler := NewH2RequestHandler()
-	h2RequestHandler.SetTunIO(tunio)
-	h2RequestHandler.SetConnMgr(connmgr)
+	requestHandler := NewRequestHandler()
+	requestHandler.SetTunIO(tunio)
+	requestHandler.SetConnMgr(connmgr)
 
 	upstream := config.Get("upstream_traffic_limit").AsUint64()
 	downstream := config.Get("downstream_traffic_limit").AsUint64()
 
-	httpServer := NewHttpServer(upstream, downstream, wsRequestHandler, h2RequestHandler)
+	httpServer := NewHttpServer(upstream, downstream, requestHandler)
 	httpServer.SetLoginCheckHandler(loginchecker)
 
-	elog.Infof("listen %v,ws %v,h2 %v", config.Get("http.listen").AsStr(), config.Get("http.ws_path").AsStr(), config.Get("http.h2_path").AsStr())
+	elog.Infof("listen %v,ws %v,h2 %v,hc %v",
+		config.Get("http.listen").AsStr(),
+		config.Get("http.ws_path").AsStr(),
+		config.Get("http.h2_path").AsStr(),
+		config.Get("http.hc_path").AsStr())
 
 	if config.Get("http.tls_mode").AsBool() == true {
 		err = httpServer.ListenTLS(
@@ -85,10 +85,16 @@ func (ps *PoleVPNServer) Start(config *anyvalue.AnyValue) error {
 			config.Get("http.key_file").AsStr(),
 			config.Get("http.ws_path").AsStr(),
 			config.Get("http.h2_path").AsStr(),
+			config.Get("http.hc_path").AsStr(),
 		)
 
 	} else {
-		err = httpServer.Listen(config.Get("http.listen").AsStr(), config.Get("http.ws_path").AsStr(), config.Get("http.h2_path").AsStr())
+		err = httpServer.Listen(
+			config.Get("http.listen").AsStr(),
+			config.Get("http.ws_path").AsStr(),
+			config.Get("http.h2_path").AsStr(),
+			config.Get("http.hc_path").AsStr(),
+		)
 	}
 
 	if err != nil {

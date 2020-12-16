@@ -21,14 +21,14 @@ type WebSocketConn struct {
 	conn         *websocket.Conn
 	wch          chan []byte
 	closed       bool
-	handler      *WSRequestHandler
+	handler      *RequestHandler
 	downlimit    uint64
 	uplimit      uint64
 	tcDownStream *TrafficCounter
 	tcUpStream   *TrafficCounter
 }
 
-func NewWebSocketConn(conn *websocket.Conn, downlimit uint64, uplimit uint64, handler *WSRequestHandler) *WebSocketConn {
+func NewWebSocketConn(conn *websocket.Conn, downlimit uint64, uplimit uint64, handler *RequestHandler) *WebSocketConn {
 	return &WebSocketConn{
 		conn:         conn,
 		closed:       false,

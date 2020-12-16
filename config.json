@@ -5,7 +5,8 @@
         "cert_file":"./keys/server.crt",
         "key_file":"./keys/server.key",
         "ws_path":"/ws",
-        "h2_path":"/h2"
+        "h2_path":"/h2",
+        "hc_path":"/hc"
     },
     "kcp":{
         "listen":"0.0.0.0:443"

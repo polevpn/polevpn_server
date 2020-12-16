@@ -2,7 +2,10 @@ package main
 
 import (
 	"net/http"
+	"strconv"
+	"strings"
 	"sync"
+	"time"
 
 	"github.com/gorilla/websocket"
 	"github.com/polevpn/elog"
@@ -12,16 +15,15 @@ import (
 )
 
 type HttpServer struct {
-	wsRequestHandler *WSRequestHandler
-	h2RequestHandler *H2RequestHandler
-	connMgr          *ConnMgr
-	loginchecker     LoginChecker
-	upgrader         *websocket.Upgrader
-	uplimit          uint64
-	downlimit        uint64
+	requestHandler *RequestHandler
+	connMgr        *ConnMgr
+	loginchecker   LoginChecker
+	upgrader       *websocket.Upgrader
+	uplimit        uint64
+	downlimit      uint64
 }
 
-func NewHttpServer(uplimit uint64, downlimit uint64, wsRequestHandler *WSRequestHandler, h2RequestHandler *H2RequestHandler) *HttpServer {
+func NewHttpServer(uplimit uint64, downlimit uint64, requestHandler *RequestHandler) *HttpServer {
 
 	upgrader := &websocket.Upgrader{
 		CheckOrigin: func(r *http.Request) bool {
@@ -29,14 +31,14 @@ func NewHttpServer(uplimit uint64, downlimit uint64, wsRequestHandler *WSRequest
 		},
 	}
 
-	return &HttpServer{wsRequestHandler: wsRequestHandler, h2RequestHandler: h2RequestHandler, upgrader: upgrader, uplimit: uplimit, downlimit: downlimit}
+	return &HttpServer{requestHandler: requestHandler, upgrader: upgrader, uplimit: uplimit, downlimit: downlimit}
 }
 
 func (hs *HttpServer) SetLoginCheckHandler(loginchecker LoginChecker) {
 	hs.loginchecker = loginchecker
 }
 
-func (hs *HttpServer) Listen(addr string, wsPath string, h2Path string) error {
+func (hs *HttpServer) Listen(addr string, wsPath string, h2Path string, hcPath string) error {
 
 	h2s := &http2.Server{}
 
@@ -45,6 +47,8 @@ func (hs *HttpServer) Listen(addr string, wsPath string, h2Path string) error {
 			hs.wsHandler(w, r)
 		} else if r.URL.Path == h2Path {
 			hs.h2Handler(w, r)
+		} else if r.URL.Path == hcPath {
+			hs.hcHandler(w, r)
 		} else {
 			hs.defaultHandler(w, r)
 		}
@@ -63,10 +67,11 @@ func (hs *HttpServer) defaultHandler(w http.ResponseWriter, r *http.Request) {
 	hs.respError(http.StatusForbidden, w)
 }
 
-func (hs *HttpServer) ListenTLS(addr string, certFile string, keyFile string, wsPath string, h2Path string) error {
+func (hs *HttpServer) ListenTLS(addr string, certFile string, keyFile string, wsPath string, h2Path string, hcPath string) error {
 	http.HandleFunc("/", hs.defaultHandler)
 	http.HandleFunc(wsPath, hs.wsHandler)
 	http.HandleFunc(h2Path, hs.h2Handler)
+	http.HandleFunc(hcPath, hs.hcHandler)
 
 	return http.ListenAndServeTLS(addr, certFile, keyFile, nil)
 }
@@ -82,6 +87,74 @@ func (hs *HttpServer) respError(status int, w http.ResponseWriter) {
 		w.Write([]byte("<html>\n<head><title>403 Forbidden</title></head>\n<body bgcolor=\"white\">\n<center><h1>403 Forbidden</h1></center>\n<hr><center>nginx/1.10.3</center>\n</body>\n</html>"))
 
 	}
+}
+
+func (hs *HttpServer) hcHandler(w http.ResponseWriter, r *http.Request) {
+
+	defer PanicHandler()
+
+	if r.Method == http.MethodPost {
+
+		user := r.URL.Query().Get("user")
+		pwd := r.URL.Query().Get("pwd")
+		ip := r.URL.Query().Get("ip")
+
+		elog.Infof("user:%v,pwd:%v,ip:%v connect", user, pwd, ip)
+
+		if !hs.loginchecker.CheckLogin(user, pwd) {
+			elog.Errorf("user:%v,pwd:%v,ip:%v verify fail", user, pwd, ip)
+			hs.respError(http.StatusForbidden, w)
+			return
+		}
+
+		if ip != "" {
+			if !hs.requestHandler.connmgr.IsAllocedAddress(ip) {
+				elog.Errorf("user:%v,pwd:%v,ip:%v reconnect fail,ip address not alloc to it", user, pwd, ip)
+				hs.respError(http.StatusBadRequest, w)
+
+				return
+			}
+
+			if hs.requestHandler.connmgr.GetIPAttachUser(ip) != user {
+				elog.Errorf("user:%v,pwd:%v,ip:%v reconnect fail,ip address not belong to the user", user, pwd, ip)
+				hs.respError(http.StatusBadRequest, w)
+				return
+			}
+		}
+		streamId := strconv.FormatInt(time.Now().UnixNano(), 10)
+		streamId = strings.Split(r.RemoteAddr, ":")[0] + "-" + streamId
+		w.Write([]byte(streamId))
+		conn := NewHttpConn(streamId, hs.downlimit, hs.uplimit, hs.requestHandler)
+		hs.requestHandler.connmgr.SetConn(streamId, conn)
+		conn.handler.OnConnection(conn, user, ip)
+
+	} else if r.Method == http.MethodGet {
+		streamId := r.URL.Query().Get("stream")
+		conn := hs.requestHandler.connmgr.GetConn(streamId)
+
+		if conn == nil {
+			hs.respError(http.StatusForbidden, w)
+			return
+		}
+
+		httpconn := conn.(*HttpConn)
+		httpconn.SetDownStream(w, w.(http.Flusher))
+		httpconn.Write()
+
+	} else if r.Method == http.MethodPut {
+		streamId := r.URL.Query().Get("stream")
+		conn := hs.requestHandler.connmgr.GetConn(streamId)
+
+		if conn == nil {
+			hs.respError(http.StatusForbidden, w)
+			return
+		}
+
+		httpconn := conn.(*HttpConn)
+		httpconn.SetUpStream(r.Body)
+		httpconn.Read()
+	}
+
 }
 
 func (hs *HttpServer) h2Handler(w http.ResponseWriter, r *http.Request) {
@@ -101,14 +174,14 @@ func (hs *HttpServer) h2Handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if ip != "" {
-		if !hs.h2RequestHandler.connmgr.IsAllocedAddress(ip) {
+		if !hs.requestHandler.connmgr.IsAllocedAddress(ip) {
 			elog.Errorf("user:%v,pwd:%v,ip:%v reconnect fail,ip address not alloc to it", user, pwd, ip)
 			hs.respError(http.StatusBadRequest, w)
 
 			return
 		}
 
-		if hs.h2RequestHandler.connmgr.GetIPAttachUser(ip) != user {
+		if hs.requestHandler.connmgr.GetIPAttachUser(ip) != user {
 			elog.Errorf("user:%v,pwd:%v,ip:%v reconnect fail,ip address not belong to the user", user, pwd, ip)
 			hs.respError(http.StatusBadRequest, w)
 			return
@@ -124,11 +197,11 @@ func (hs *HttpServer) h2Handler(w http.ResponseWriter, r *http.Request) {
 
 	elog.Info("accpet new h2 conn", conn.RemoteAddr().String())
 
-	if hs.h2RequestHandler != nil {
+	if hs.requestHandler != nil {
 		wg := &sync.WaitGroup{}
 		wg.Add(2)
-		htpp2conn := NewHttp2Conn(wg, conn, hs.downlimit, hs.uplimit, hs.h2RequestHandler)
-		hs.h2RequestHandler.OnConnection(htpp2conn, user, ip)
+		htpp2conn := NewHttp2Conn(wg, conn, hs.downlimit, hs.uplimit, hs.requestHandler)
+		hs.requestHandler.OnConnection(htpp2conn, user, ip)
 		go htpp2conn.Read()
 		go htpp2conn.Write()
 		wg.Wait()
@@ -156,14 +229,14 @@ func (hs *HttpServer) wsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if ip != "" {
-		if !hs.wsRequestHandler.connmgr.IsAllocedAddress(ip) {
+		if !hs.requestHandler.connmgr.IsAllocedAddress(ip) {
 			elog.Errorf("user:%v,pwd:%v,ip:%v reconnect fail,ip address not alloc to it", user, pwd, ip)
 			hs.respError(http.StatusBadRequest, w)
 
 			return
 		}
 
-		if hs.wsRequestHandler.connmgr.GetIPAttachUser(ip) != user {
+		if hs.requestHandler.connmgr.GetIPAttachUser(ip) != user {
 			elog.Errorf("user:%v,pwd:%v,ip:%v reconnect fail,ip address not belong to the user", user, pwd, ip)
 			hs.respError(http.StatusBadRequest, w)
 			return
@@ -177,14 +250,14 @@ func (hs *HttpServer) wsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	elog.Info("accpet new ws conn", conn.RemoteAddr().String())
-	if hs.wsRequestHandler == nil {
+	if hs.requestHandler == nil {
 		elog.Error("request dispatcher haven't set")
 		return
 	}
 
-	if hs.wsRequestHandler != nil {
-		wsconn := NewWebSocketConn(conn, hs.downlimit, hs.uplimit, hs.wsRequestHandler)
-		hs.wsRequestHandler.OnConnection(wsconn, user, ip)
+	if hs.requestHandler != nil {
+		wsconn := NewWebSocketConn(conn, hs.downlimit, hs.uplimit, hs.requestHandler)
+		hs.requestHandler.OnConnection(wsconn, user, ip)
 		go wsconn.Read()
 		go wsconn.Write()
 	} else {

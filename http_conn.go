@@ -4,23 +4,24 @@ import (
 	"encoding/binary"
 	"io"
 	"math/rand"
-	"sync"
+	"net/http"
 	"time"
 
 	"github.com/polevpn/elog"
-	"github.com/polevpn/h2conn"
 	"github.com/polevpn/netstack/tcpip/header"
 	"github.com/polevpn/netstack/tcpip/transport/tcp"
 	"github.com/polevpn/netstack/tcpip/transport/udp"
 )
 
 const (
-	CH_HTTP2_WRITE_SIZE = 2000
+	CH_HTTP_WRITE_SIZE = 2000
 )
 
-type Http2Conn struct {
-	wg           *sync.WaitGroup
-	conn         *h2conn.Conn
+type HttpConn struct {
+	stream       string
+	up           io.ReadCloser
+	down         io.Writer
+	flusher      http.Flusher
 	wch          chan []byte
 	closed       bool
 	handler      *RequestHandler
@@ -30,10 +31,9 @@ type Http2Conn struct {
 	tcUpStream   *TrafficCounter
 }
 
-func NewHttp2Conn(wg *sync.WaitGroup, conn *h2conn.Conn, downlimit uint64, uplimit uint64, handler *RequestHandler) *Http2Conn {
-	return &Http2Conn{
-		wg:           wg,
-		conn:         conn,
+func NewHttpConn(stream string, downlimit uint64, uplimit uint64, handler *RequestHandler) *HttpConn {
+	return &HttpConn{
+		stream:       stream,
 		closed:       false,
 		wch:          make(chan []byte, CH_HTTP2_WRITE_SIZE),
 		handler:      handler,
@@ -44,37 +44,50 @@ func NewHttp2Conn(wg *sync.WaitGroup, conn *h2conn.Conn, downlimit uint64, uplim
 	}
 }
 
-func (h2c *Http2Conn) Close(flag bool) error {
-	if h2c.closed == false {
-		h2c.closed = true
-		if h2c.wch != nil {
-			h2c.wch <- nil
-			close(h2c.wch)
+func (hc *HttpConn) SetUpStream(up io.ReadCloser) {
+	hc.up = up
+}
+
+func (hc *HttpConn) SetDownStream(down io.Writer, flusher http.Flusher) {
+	hc.down = down
+	hc.flusher = flusher
+}
+
+func (hc *HttpConn) Ready() bool {
+	return hc.up != nil && hc.down != nil
+}
+
+func (hc *HttpConn) Close(flag bool) error {
+	if hc.closed == false {
+		hc.closed = true
+		if hc.wch != nil {
+			hc.wch <- nil
+			close(hc.wch)
 		}
-		err := h2c.conn.Close()
+		err := hc.up.Close()
 		if flag {
-			go h2c.handler.OnClosed(h2c, false)
+			go hc.handler.OnClosed(hc, false)
 		}
 		return err
 	}
 	return nil
 }
 
-func (h2c *Http2Conn) String() string {
-	return h2c.conn.RemoteAddr().String() + "->" + h2c.conn.LocalAddr().String()
+func (hc *HttpConn) String() string {
+	return hc.stream
 }
 
-func (h2c *Http2Conn) IsClosed() bool {
-	return h2c.closed
+func (hc *HttpConn) IsClosed() bool {
+	return hc.closed
 }
 
-func (h2c *Http2Conn) checkStreamLimit(pkt []byte, tfcounter *TrafficCounter, limit uint64) (bool, time.Duration) {
+func (hc *HttpConn) checkStreamLimit(pkt []byte, tfcounter *TrafficCounter, limit uint64) (bool, time.Duration) {
 	bytes, ltime := tfcounter.StreamCount(uint64(len(pkt)))
 	if bytes > limit/(1000/uint64(tfcounter.StreamCountInterval()/time.Millisecond)) {
 		duration := ltime.Add(tfcounter.StreamCountInterval()).Sub(time.Now())
 		if duration > 0 {
 			drop := false
-			if len(h2c.wch) > CH_WEBSOCKET_WRITE_SIZE*0.5 {
+			if len(hc.wch) > CH_WEBSOCKET_WRITE_SIZE*0.5 {
 				ippkt := header.IPv4(pkt)
 				if ippkt.Protocol() == uint8(tcp.ProtocolNumber) {
 					n := rand.Intn(5)
@@ -99,22 +112,21 @@ func (h2c *Http2Conn) checkStreamLimit(pkt []byte, tfcounter *TrafficCounter, li
 	return false, 0
 }
 
-func (h2c *Http2Conn) Read() {
+func (hc *HttpConn) Read() {
 	defer func() {
-		h2c.Close(true)
-		h2c.wg.Done()
+		hc.Close(true)
 	}()
 
 	defer PanicHandler()
 
 	for {
 		prefetch := make([]byte, 2)
-		_, err := h2c.conn.Read(prefetch)
+		_, err := hc.up.Read(prefetch)
 		if err != nil {
 			if err == io.ErrUnexpectedEOF || err == io.EOF {
-				elog.Info(h2c.String(), "conn closed")
+				elog.Info(hc.String(), "conn closed")
 			} else {
-				elog.Error(h2c.String(), "conn read exception:", err)
+				elog.Error(hc.String(), "conn read exception:", err)
 			}
 			return
 		}
@@ -125,12 +137,12 @@ func (h2c *Http2Conn) Read() {
 		copy(pkt, prefetch)
 		var offset uint16 = 2
 		for {
-			n, err := h2c.conn.Read(pkt[offset:])
+			n, err := hc.up.Read(pkt[offset:])
 			if err != nil {
 				if err == io.ErrUnexpectedEOF || err == io.EOF {
-					elog.Info(h2c.String(), "conn closed")
+					elog.Info(hc.String(), "conn closed")
 				} else {
-					elog.Error(h2c.String(), "conn read exception:", err)
+					elog.Error(hc.String(), "conn read exception:", err)
 				}
 				return
 			}
@@ -143,7 +155,7 @@ func (h2c *Http2Conn) Read() {
 		ppkt := PolePacket(pkt)
 		if ppkt.Cmd() == CMD_C2S_IPDATA {
 			//traffic limit
-			limit, duration := h2c.checkStreamLimit(ppkt.Payload(), h2c.tcUpStream, h2c.uplimit)
+			limit, duration := hc.checkStreamLimit(ppkt.Payload(), hc.tcUpStream, hc.uplimit)
 			if limit {
 				if duration > 0 {
 					time.Sleep(duration)
@@ -152,33 +164,32 @@ func (h2c *Http2Conn) Read() {
 				}
 			}
 		}
-		h2c.handler.OnRequest(pkt, h2c)
+		hc.handler.OnRequest(pkt, hc)
 
 	}
 
 }
 
-func (h2c *Http2Conn) Write() {
+func (hc *HttpConn) Write() {
 
-	defer h2c.wg.Done()
 	defer PanicHandler()
 
 	for {
 
-		pkt, ok := <-h2c.wch
+		pkt, ok := <-hc.wch
 		if !ok {
-			elog.Error(h2c.String(), "get pkt from write channel fail,maybe channel closed")
+			elog.Error(hc.String(), "get pkt from write channel fail,maybe channel closed")
 			return
 		}
 		if pkt == nil {
-			elog.Info(h2c.String(), "exit write process")
+			elog.Info(hc.String(), "exit write process")
 			return
 		}
 
 		ppkt := PolePacket(pkt)
 		if ppkt.Cmd() == CMD_S2C_IPDATA {
 			//traffic limit
-			limit, duration := h2c.checkStreamLimit(ppkt.Payload(), h2c.tcDownStream, h2c.downlimit)
+			limit, duration := hc.checkStreamLimit(ppkt.Payload(), hc.tcDownStream, hc.downlimit)
 			if limit {
 				if duration > 0 {
 					time.Sleep(duration)
@@ -187,23 +198,24 @@ func (h2c *Http2Conn) Write() {
 				}
 			}
 		}
-		_, err := h2c.conn.Write(pkt)
+		_, err := hc.down.Write(pkt)
 		if err != nil {
 			if err == io.EOF || err == io.ErrUnexpectedEOF {
-				elog.Info(h2c.String(), "conn closed")
+				elog.Info(hc.String(), "conn closed")
 			} else {
-				elog.Error(h2c.String(), "conn write exception:", err)
+				elog.Error(hc.String(), "conn write exception:", err)
 			}
 			return
 		}
+		hc.flusher.Flush()
 	}
 }
 
-func (h2c *Http2Conn) Send(pkt []byte) {
-	if h2c.closed == true {
+func (hc *HttpConn) Send(pkt []byte) {
+	if hc.closed == true {
 		return
 	}
-	if h2c.wch != nil {
-		h2c.wch <- pkt
+	if hc.wch != nil {
+		hc.wch <- pkt
 	}
 }

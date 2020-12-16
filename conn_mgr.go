@@ -14,6 +14,7 @@ const (
 
 type ConnMgr struct {
 	ip2conns    map[string]Conn
+	conns       map[string]Conn
 	conn2ips    map[string]string
 	ip2actives  map[string]time.Time
 	ip2users    map[string]string
@@ -25,6 +26,7 @@ type ConnMgr struct {
 func NewConnMgr() *ConnMgr {
 	cm := &ConnMgr{
 		ip2conns:   make(map[string]Conn),
+		conns:      make(map[string]Conn),
 		mutex:      &sync.Mutex{},
 		conn2ips:   make(map[string]string),
 		ip2actives: make(map[string]time.Time),
@@ -191,4 +193,22 @@ func (cm *ConnMgr) GeIPByConn(conn Conn) string {
 	cm.mutex.Lock()
 	defer cm.mutex.Unlock()
 	return cm.conn2ips[conn.String()]
+}
+
+func (cm *ConnMgr) SetConn(streamId string, conn Conn) {
+	cm.mutex.Lock()
+	defer cm.mutex.Unlock()
+	cm.conns[streamId] = conn
+}
+
+func (cm *ConnMgr) GetConn(streamId string) Conn {
+	cm.mutex.Lock()
+	defer cm.mutex.Unlock()
+	return cm.conns[streamId]
+}
+
+func (cm *ConnMgr) RemoveConn(streamId string) {
+	cm.mutex.Lock()
+	defer cm.mutex.Unlock()
+	delete(cm.conns, streamId)
 }

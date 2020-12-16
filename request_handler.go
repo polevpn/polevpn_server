@@ -5,25 +5,25 @@ import (
 	"github.com/polevpn/elog"
 )
 
-type H2RequestHandler struct {
+type RequestHandler struct {
 	tunio   *TunIO
 	connmgr *ConnMgr
 }
 
-func NewH2RequestHandler() *H2RequestHandler {
+func NewRequestHandler() *RequestHandler {
 
-	return &H2RequestHandler{}
+	return &RequestHandler{}
 }
 
-func (r *H2RequestHandler) SetTunIO(tunio *TunIO) {
+func (r *RequestHandler) SetTunIO(tunio *TunIO) {
 	r.tunio = tunio
 }
 
-func (r *H2RequestHandler) SetConnMgr(connmgr *ConnMgr) {
+func (r *RequestHandler) SetConnMgr(connmgr *ConnMgr) {
 	r.connmgr = connmgr
 }
 
-func (r *H2RequestHandler) OnRequest(pkt []byte, conn *Http2Conn) {
+func (r *RequestHandler) OnRequest(pkt []byte, conn Conn) {
 
 	ppkt := PolePacket(pkt)
 	switch ppkt.Cmd() {
@@ -42,7 +42,7 @@ func (r *H2RequestHandler) OnRequest(pkt []byte, conn *Http2Conn) {
 	}
 }
 
-func (r *H2RequestHandler) OnConnection(conn *Http2Conn, user string, ip string) {
+func (r *RequestHandler) OnConnection(conn Conn, user string, ip string) {
 	if ip != "" {
 		oldconn := r.connmgr.GetConnByIP(ip)
 		if oldconn != nil {
@@ -56,7 +56,7 @@ func (r *H2RequestHandler) OnConnection(conn *Http2Conn, user string, ip string)
 
 }
 
-func (r *H2RequestHandler) handleAllocIPAddress(pkt PolePacket, conn *Http2Conn) {
+func (r *RequestHandler) handleAllocIPAddress(pkt PolePacket, conn Conn) {
 	av := anyvalue.New()
 
 	ip := r.connmgr.AllocAddress()
@@ -81,7 +81,7 @@ func (r *H2RequestHandler) handleAllocIPAddress(pkt PolePacket, conn *Http2Conn)
 	}
 }
 
-func (r *H2RequestHandler) handleC2SIPData(pkt PolePacket, conn *Http2Conn) {
+func (r *RequestHandler) handleC2SIPData(pkt PolePacket, conn Conn) {
 
 	if r.tunio != nil {
 		err := r.tunio.Enqueue(pkt[POLE_PACKET_HEADER_LEN:])
@@ -91,7 +91,7 @@ func (r *H2RequestHandler) handleC2SIPData(pkt PolePacket, conn *Http2Conn) {
 	}
 }
 
-func (r *H2RequestHandler) handleHeartBeat(pkt PolePacket, conn *Http2Conn) {
+func (r *RequestHandler) handleHeartBeat(pkt PolePacket, conn Conn) {
 	buf := make([]byte, POLE_PACKET_HEADER_LEN)
 	resppkt := PolePacket(buf)
 	resppkt.SetLen(POLE_PACKET_HEADER_LEN)
@@ -101,12 +101,12 @@ func (r *H2RequestHandler) handleHeartBeat(pkt PolePacket, conn *Http2Conn) {
 	r.connmgr.UpdateConnActiveTime(conn)
 }
 
-func (r *H2RequestHandler) handleClientClose(pkt PolePacket, conn *Http2Conn) {
+func (r *RequestHandler) handleClientClose(pkt PolePacket, conn Conn) {
 	elog.Info(conn.String(), "proactive close")
 	r.connmgr.RelelaseAddress(r.connmgr.GeIPByConn(conn))
 }
 
-func (r *H2RequestHandler) OnClosed(conn *Http2Conn, proactive bool) {
+func (r *RequestHandler) OnClosed(conn Conn, proactive bool) {
 
 	elog.Info("connection closed event from", conn.String())
 
