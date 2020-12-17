@@ -140,6 +140,7 @@ func (hs *HttpServer) hcHandler(w http.ResponseWriter, r *http.Request) {
 		httpconn := conn.(*HttpConn)
 		flusher := w.(http.Flusher)
 		httpconn.SetDownStream(w, flusher)
+		w.Header().Add("Content-Length", strconv.FormatInt(10*1024*1024*1024, 10))
 		w.WriteHeader(http.StatusOK)
 		flusher.Flush()
 		httpconn.Write()

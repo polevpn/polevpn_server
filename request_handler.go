@@ -112,7 +112,7 @@ func (r *RequestHandler) OnClosed(conn Conn, proactive bool) {
 
 	r.connmgr.DetachIPAddressFromConn(conn)
 	r.connmgr.DetachUserFromConn(conn)
-
+	r.connmgr.RemoveConn(conn.String())
 	//just process proactive close event
 	if proactive {
 		elog.Info(conn.String(), "proactive close")
