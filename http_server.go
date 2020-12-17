@@ -93,7 +93,7 @@ func (hs *HttpServer) hcHandler(w http.ResponseWriter, r *http.Request) {
 
 	defer PanicHandler()
 
-	if r.Method == http.MethodPost {
+	if r.Method == http.MethodPut {
 
 		user := r.URL.Query().Get("user")
 		pwd := r.URL.Query().Get("pwd")
@@ -138,10 +138,13 @@ func (hs *HttpServer) hcHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		httpconn := conn.(*HttpConn)
-		httpconn.SetDownStream(w, w.(http.Flusher))
+		flusher := w.(http.Flusher)
+		httpconn.SetDownStream(w, flusher)
+		w.WriteHeader(http.StatusOK)
+		flusher.Flush()
 		httpconn.Write()
 
-	} else if r.Method == http.MethodPut {
+	} else if r.Method == http.MethodPost {
 		streamId := r.URL.Query().Get("stream")
 		conn := hs.requestHandler.connmgr.GetConn(streamId)
 
