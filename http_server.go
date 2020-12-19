@@ -38,7 +38,9 @@ func (hs *HttpServer) SetLoginCheckHandler(loginchecker LoginChecker) {
 	hs.loginchecker = loginchecker
 }
 
-func (hs *HttpServer) Listen(addr string, wsPath string, h2Path string, hcPath string) error {
+func (hs *HttpServer) Listen(wg *sync.WaitGroup, addr string, wsPath string, h2Path string, hcPath string) {
+
+	defer wg.Done()
 
 	h2s := &http2.Server{}
 
@@ -59,7 +61,7 @@ func (hs *HttpServer) Listen(addr string, wsPath string, h2Path string, hcPath s
 		Handler: h2c.NewHandler(handler, h2s),
 	}
 
-	return server.ListenAndServe()
+	elog.Error(server.ListenAndServe())
 
 }
 
@@ -67,13 +69,16 @@ func (hs *HttpServer) defaultHandler(w http.ResponseWriter, r *http.Request) {
 	hs.respError(http.StatusForbidden, w)
 }
 
-func (hs *HttpServer) ListenTLS(addr string, certFile string, keyFile string, wsPath string, h2Path string, hcPath string) error {
+func (hs *HttpServer) ListenTLS(wg *sync.WaitGroup, addr string, certFile string, keyFile string, wsPath string, h2Path string, hcPath string) {
+
+	defer wg.Done()
+
 	http.HandleFunc("/", hs.defaultHandler)
 	http.HandleFunc(wsPath, hs.wsHandler)
 	http.HandleFunc(h2Path, hs.h2Handler)
 	http.HandleFunc(hcPath, hs.hcHandler)
 
-	return http.ListenAndServeTLS(addr, certFile, keyFile, nil)
+	elog.Error(http.ListenAndServeTLS(addr, certFile, keyFile, nil))
 }
 
 func (hs *HttpServer) respError(status int, w http.ResponseWriter) {
@@ -99,7 +104,7 @@ func (hs *HttpServer) hcHandler(w http.ResponseWriter, r *http.Request) {
 		pwd := r.URL.Query().Get("pwd")
 		ip := r.URL.Query().Get("ip")
 
-		elog.Infof("user:%v,pwd:%v,ip:%v connect", user, pwd, ip)
+		elog.Infof("http user:%v,pwd:%v,ip:%v connect", user, pwd, ip)
 
 		if !hs.loginchecker.CheckLogin(user, pwd) {
 			elog.Errorf("user:%v,pwd:%v,ip:%v verify fail", user, pwd, ip)
@@ -169,7 +174,7 @@ func (hs *HttpServer) h2Handler(w http.ResponseWriter, r *http.Request) {
 	pwd := r.URL.Query().Get("pwd")
 	ip := r.URL.Query().Get("ip")
 
-	elog.Infof("user:%v,pwd:%v,ip:%v connect", user, pwd, ip)
+	elog.Infof("http2 user:%v,pwd:%v,ip:%v connect", user, pwd, ip)
 
 	if !hs.loginchecker.CheckLogin(user, pwd) {
 		elog.Errorf("user:%v,pwd:%v,ip:%v verify fail", user, pwd, ip)

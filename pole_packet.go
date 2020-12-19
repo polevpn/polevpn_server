@@ -9,6 +9,7 @@ const (
 	CMD_HEART_BEAT    = 0x4
 	CMD_CLIENT_CLOSED = 0x5
 	CMD_KICK_OUT      = 0x6
+	CMD_USER_AUTH     = 0x7
 )
 
 const (

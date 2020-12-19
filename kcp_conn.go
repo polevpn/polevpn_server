@@ -4,24 +4,21 @@ import (
 	"encoding/binary"
 	"io"
 	"math/rand"
-	"net/http"
 	"time"
 
 	"github.com/polevpn/elog"
 	"github.com/polevpn/netstack/tcpip/header"
 	"github.com/polevpn/netstack/tcpip/transport/tcp"
 	"github.com/polevpn/netstack/tcpip/transport/udp"
+	"github.com/xtaci/kcp-go/v5"
 )
 
 const (
-	CH_HTTP_WRITE_SIZE = 2000
+	CH_KCP_WRITE_SIZE = 2000
 )
 
-type HttpConn struct {
-	stream       string
-	up           io.ReadCloser
-	down         io.Writer
-	flusher      http.Flusher
+type KCPConn struct {
+	conn         *kcp.UDPSession
 	wch          chan []byte
 	closed       bool
 	handler      *RequestHandler
@@ -31,9 +28,9 @@ type HttpConn struct {
 	tcUpStream   *TrafficCounter
 }
 
-func NewHttpConn(stream string, downlimit uint64, uplimit uint64, handler *RequestHandler) *HttpConn {
-	return &HttpConn{
-		stream:       stream,
+func NewKCPConn(conn *kcp.UDPSession, downlimit uint64, uplimit uint64, handler *RequestHandler) *KCPConn {
+	return &KCPConn{
+		conn:         conn,
 		closed:       false,
 		wch:          make(chan []byte, CH_HTTP2_WRITE_SIZE),
 		handler:      handler,
@@ -44,53 +41,37 @@ func NewHttpConn(stream string, downlimit uint64, uplimit uint64, handler *Reque
 	}
 }
 
-func (hc *HttpConn) SetUpStream(up io.ReadCloser) {
-	hc.up = up
-}
-
-func (hc *HttpConn) SetDownStream(down io.Writer, flusher http.Flusher) {
-	hc.down = down
-	hc.flusher = flusher
-}
-
-func (hc *HttpConn) Ready() bool {
-	return hc.up != nil && hc.down != nil
-}
-
-func (hc *HttpConn) Close(flag bool) error {
-	if hc.closed == false {
-		hc.closed = true
-		if hc.wch != nil {
-			hc.wch <- nil
-			close(hc.wch)
+func (kc *KCPConn) Close(flag bool) error {
+	if kc.closed == false {
+		kc.closed = true
+		if kc.wch != nil {
+			kc.wch <- nil
+			close(kc.wch)
 		}
-		var err error
-		if hc.up != nil {
-			err = hc.up.Close()
-		}
+		err := kc.conn.Close()
 		if flag {
-			go hc.handler.OnClosed(hc, false)
+			go kc.handler.OnClosed(kc, false)
 		}
 		return err
 	}
 	return nil
 }
 
-func (hc *HttpConn) String() string {
-	return hc.stream
+func (kc *KCPConn) String() string {
+	return kc.conn.RemoteAddr().String() + "->" + kc.conn.LocalAddr().String()
 }
 
-func (hc *HttpConn) IsClosed() bool {
-	return hc.closed
+func (kc *KCPConn) IsClosed() bool {
+	return kc.closed
 }
 
-func (hc *HttpConn) checkStreamLimit(pkt []byte, tfcounter *TrafficCounter, limit uint64) (bool, time.Duration) {
+func (kc *KCPConn) checkStreamLimit(pkt []byte, tfcounter *TrafficCounter, limit uint64) (bool, time.Duration) {
 	bytes, ltime := tfcounter.StreamCount(uint64(len(pkt)))
 	if bytes > limit/(1000/uint64(tfcounter.StreamCountInterval()/time.Millisecond)) {
 		duration := ltime.Add(tfcounter.StreamCountInterval()).Sub(time.Now())
 		if duration > 0 {
 			drop := false
-			if len(hc.wch) > CH_WEBSOCKET_WRITE_SIZE*0.5 {
+			if len(kc.wch) > CH_WEBSOCKET_WRITE_SIZE*0.5 {
 				ippkt := header.IPv4(pkt)
 				if ippkt.Protocol() == uint8(tcp.ProtocolNumber) {
 					n := rand.Intn(5)
@@ -115,25 +96,24 @@ func (hc *HttpConn) checkStreamLimit(pkt []byte, tfcounter *TrafficCounter, limi
 	return false, 0
 }
 
-func (hc *HttpConn) Read() {
+func (kc *KCPConn) Read() {
 	defer func() {
-		hc.Close(true)
+		kc.Close(true)
 	}()
 
 	defer PanicHandler()
 
 	for {
-
 		var preOffset = 0
 		prefetch := make([]byte, 2)
 
 		for {
-			n, err := hc.up.Read(prefetch[preOffset:])
+			n, err := kc.conn.Read(prefetch[preOffset:])
 			if err != nil {
 				if err == io.ErrUnexpectedEOF || err == io.EOF {
-					elog.Info(hc.String(), "conn closed")
+					elog.Info(kc.String(), "conn closed")
 				} else {
-					elog.Error(hc.String(), "conn read exception:", err)
+					elog.Error(kc.String(), "conn read exception:", err)
 				}
 				return
 			}
@@ -154,12 +134,12 @@ func (hc *HttpConn) Read() {
 		copy(pkt, prefetch)
 		var offset uint16 = 2
 		for {
-			n, err := hc.up.Read(pkt[offset:])
+			n, err := kc.conn.Read(pkt[offset:])
 			if err != nil {
 				if err == io.ErrUnexpectedEOF || err == io.EOF {
-					elog.Info(hc.String(), "conn closed")
+					elog.Info(kc.String(), "conn closed")
 				} else {
-					elog.Error(hc.String(), "conn read exception:", err)
+					elog.Error(kc.String(), "conn read exception:", err)
 				}
 				return
 			}
@@ -172,7 +152,7 @@ func (hc *HttpConn) Read() {
 		ppkt := PolePacket(pkt)
 		if ppkt.Cmd() == CMD_C2S_IPDATA {
 			//traffic limit
-			limit, duration := hc.checkStreamLimit(ppkt.Payload(), hc.tcUpStream, hc.uplimit)
+			limit, duration := kc.checkStreamLimit(ppkt.Payload(), kc.tcUpStream, kc.uplimit)
 			if limit {
 				if duration > 0 {
 					time.Sleep(duration)
@@ -181,32 +161,32 @@ func (hc *HttpConn) Read() {
 				}
 			}
 		}
-		hc.handler.OnRequest(pkt, hc)
+		kc.handler.OnRequest(pkt, kc)
 
 	}
 
 }
 
-func (hc *HttpConn) Write() {
+func (kc *KCPConn) Write() {
 
 	defer PanicHandler()
 
 	for {
 
-		pkt, ok := <-hc.wch
+		pkt, ok := <-kc.wch
 		if !ok {
-			elog.Error(hc.String(), "get pkt from write channel fail,maybe channel closed")
+			elog.Error(kc.String(), "get pkt from write channel fail,maybe channel closed")
 			return
 		}
 		if pkt == nil {
-			elog.Info(hc.String(), "exit write process")
+			elog.Info(kc.String(), "exit write process")
 			return
 		}
 
 		ppkt := PolePacket(pkt)
 		if ppkt.Cmd() == CMD_S2C_IPDATA {
 			//traffic limit
-			limit, duration := hc.checkStreamLimit(ppkt.Payload(), hc.tcDownStream, hc.downlimit)
+			limit, duration := kc.checkStreamLimit(ppkt.Payload(), kc.tcDownStream, kc.downlimit)
 			if limit {
 				if duration > 0 {
 					time.Sleep(duration)
@@ -215,24 +195,23 @@ func (hc *HttpConn) Write() {
 				}
 			}
 		}
-		_, err := hc.down.Write(pkt)
+		_, err := kc.conn.Write(pkt)
 		if err != nil {
 			if err == io.EOF || err == io.ErrUnexpectedEOF {
-				elog.Info(hc.String(), "conn closed")
+				elog.Info(kc.String(), "conn closed")
 			} else {
-				elog.Error(hc.String(), "conn write exception:", err)
+				elog.Error(kc.String(), "conn write exception:", err)
 			}
 			return
 		}
-		hc.flusher.Flush()
 	}
 }
 
-func (hc *HttpConn) Send(pkt []byte) {
-	if hc.closed == true {
+func (kc *KCPConn) Send(pkt []byte) {
+	if kc.closed == true {
 		return
 	}
-	if hc.wch != nil {
-		hc.wch <- pkt
+	if kc.wch != nil {
+		kc.wch <- pkt
 	}
 }

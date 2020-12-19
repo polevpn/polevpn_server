@@ -108,18 +108,31 @@ func (h2c *Http2Conn) Read() {
 	defer PanicHandler()
 
 	for {
+		var preOffset = 0
 		prefetch := make([]byte, 2)
-		_, err := h2c.conn.Read(prefetch)
-		if err != nil {
-			if err == io.ErrUnexpectedEOF || err == io.EOF {
-				elog.Info(h2c.String(), "conn closed")
-			} else {
-				elog.Error(h2c.String(), "conn read exception:", err)
+
+		for {
+			n, err := h2c.conn.Read(prefetch[preOffset:])
+			if err != nil {
+				if err == io.ErrUnexpectedEOF || err == io.EOF {
+					elog.Info(h2c.String(), "conn closed")
+				} else {
+					elog.Error(h2c.String(), "conn read exception:", err)
+				}
+				return
 			}
-			return
+			preOffset += n
+			if preOffset >= 2 {
+				break
+			}
 		}
 
 		len := binary.BigEndian.Uint16(prefetch)
+
+		if len < POLE_PACKET_HEADER_LEN {
+			elog.Error("invalid pkt len=", len)
+			continue
+		}
 
 		pkt := make([]byte, len)
 		copy(pkt, prefetch)

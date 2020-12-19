@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	CONNECTION_TIMEOUT    = 3
+	CONNECTION_TIMEOUT    = 1
 	CHECK_TIMEOUT_INTEVAL = 5
 )
 

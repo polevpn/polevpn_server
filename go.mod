@@ -12,5 +12,7 @@ require (
 	github.com/polevpn/netstack v1.0.0
 	github.com/polevpn/water v1.0.1
 	github.com/polevpn/xnet v1.0.0
+	github.com/xtaci/kcp-go/v5 v5.6.1
+	golang.org/x/crypto v0.0.0-20200728195943-123391ffb6de
 	golang.org/x/time v0.0.0-20200630173020-3af7569d3a1e // indirect
 )

@@ -1,6 +1,8 @@
 package main
 
 import (
+	"sync"
+
 	"github.com/polevpn/anyvalue"
 	"github.com/polevpn/elog"
 )
@@ -69,37 +71,53 @@ func (ps *PoleVPNServer) Start(config *anyvalue.AnyValue) error {
 	upstream := config.Get("upstream_traffic_limit").AsUint64()
 	downstream := config.Get("downstream_traffic_limit").AsUint64()
 
-	httpServer := NewHttpServer(upstream, downstream, requestHandler)
-	httpServer.SetLoginCheckHandler(loginchecker)
+	wg := &sync.WaitGroup{}
 
-	elog.Infof("listen %v,ws %v,h2 %v,hc %v",
-		config.Get("http.listen").AsStr(),
-		config.Get("http.ws_path").AsStr(),
-		config.Get("http.h2_path").AsStr(),
-		config.Get("http.hc_path").AsStr())
+	if config.Get("kcp.enable").AsBool() {
+		kcpServer := NewKCPServer(upstream, downstream, requestHandler)
+		kcpServer.SetLoginCheckHandler(loginchecker)
+		wg.Add(1)
+		go kcpServer.Listen(wg, config.Get("kcp.listen").AsStr())
+		elog.Infof("listen kcp %v", config.Get("kcp.listen").AsStr())
+	}
 
-	if config.Get("http.tls_mode").AsBool() == true {
-		err = httpServer.ListenTLS(
+	if config.Get("http.enable").AsBool() {
+		httpServer := NewHttpServer(upstream, downstream, requestHandler)
+		httpServer.SetLoginCheckHandler(loginchecker)
+		wg.Add(1)
+		go httpServer.Listen(wg,
 			config.Get("http.listen").AsStr(),
+			config.Get("http.ws_path").AsStr(),
+			config.Get("http.h2_path").AsStr(),
+			config.Get("http.hc_path").AsStr(),
+		)
+		elog.Infof("listen http %v,[websocket %v],[http2 %v],[http1 %v]",
+			config.Get("http.listen").AsStr(),
+			config.Get("http.ws_path").AsStr(),
+			config.Get("http.h2_path").AsStr(),
+			config.Get("http.hc_path").AsStr())
+	}
+
+	if config.Get("http.tls_enable").AsBool() {
+		httpServer := NewHttpServer(upstream, downstream, requestHandler)
+		httpServer.SetLoginCheckHandler(loginchecker)
+		wg.Add(1)
+		go httpServer.ListenTLS(wg,
+			config.Get("http.tls_listen").AsStr(),
 			config.Get("http.cert_file").AsStr(),
 			config.Get("http.key_file").AsStr(),
 			config.Get("http.ws_path").AsStr(),
 			config.Get("http.h2_path").AsStr(),
 			config.Get("http.hc_path").AsStr(),
 		)
-
-	} else {
-		err = httpServer.Listen(
-			config.Get("http.listen").AsStr(),
+		elog.Infof("listen https %v,[websocket %v],[http2 %v],[http1 %v]",
+			config.Get("http.tls_listen").AsStr(),
 			config.Get("http.ws_path").AsStr(),
 			config.Get("http.h2_path").AsStr(),
-			config.Get("http.hc_path").AsStr(),
-		)
+			config.Get("http.hc_path").AsStr())
 	}
 
-	if err != nil {
-		elog.Error("http listen error", err)
-		return err
-	}
+	wg.Wait()
+
 	return nil
 }
