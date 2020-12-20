@@ -115,7 +115,7 @@ func (ks *KCPServer) getAuthResponse(av *anyvalue.AnyValue) (PolePacket, error) 
 	return pkt, nil
 }
 
-func (ks *KCPServer) readAndCheckLogin(conn *kcp.UDPSession) (*anyvalue.AnyValue, error) {
+func (ks *KCPServer) checkLogin(conn *kcp.UDPSession) (*anyvalue.AnyValue, error) {
 
 	pkt, err := ks.readAuthRequest(conn)
 
@@ -175,7 +175,7 @@ func (ks *KCPServer) readAndCheckLogin(conn *kcp.UDPSession) (*anyvalue.AnyValue
 
 func (ks *KCPServer) handleConn(conn *kcp.UDPSession) {
 
-	av, err := ks.readAndCheckLogin(conn)
+	av, err := ks.checkLogin(conn)
 	if err != nil {
 		elog.Error(err)
 		conn.Close()
