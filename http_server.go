@@ -1,6 +1,8 @@
 package main
 
 import (
+	"context"
+	"net"
 	"net/http"
 	"strconv"
 	"strings"
@@ -12,6 +14,11 @@ import (
 	"github.com/polevpn/h2conn"
 	"github.com/polevpn/xnet/http2"
 	"github.com/polevpn/xnet/http2/h2c"
+)
+
+const (
+	TCP_WRITE_BUFFER_SIZE = 524288
+	TCP_READ_BUFFER_SIZE  = 524288
 )
 
 type HttpServer struct {
@@ -29,6 +36,7 @@ func NewHttpServer(uplimit uint64, downlimit uint64, requestHandler *RequestHand
 		CheckOrigin: func(r *http.Request) bool {
 			return true
 		},
+		EnableCompression: false,
 	}
 
 	return &HttpServer{requestHandler: requestHandler, upgrader: upgrader, uplimit: uplimit, downlimit: downlimit}
@@ -59,6 +67,15 @@ func (hs *HttpServer) Listen(wg *sync.WaitGroup, addr string, wsPath string, h2P
 	server := &http.Server{
 		Addr:    addr,
 		Handler: h2c.NewHandler(handler, h2s),
+		ConnContext: func(ctx context.Context, conn net.Conn) context.Context {
+			tcpconn := conn.(*net.TCPConn)
+			tcpconn.SetNoDelay(true)
+			tcpconn.SetKeepAlive(true)
+			tcpconn.SetWriteBuffer(TCP_WRITE_BUFFER_SIZE)
+			tcpconn.SetReadBuffer(TCP_READ_BUFFER_SIZE)
+			tcpconn.SetKeepAlivePeriod(time.Second * 15)
+			return ctx
+		},
 	}
 
 	elog.Error(server.ListenAndServe())
@@ -73,12 +90,23 @@ func (hs *HttpServer) ListenTLS(wg *sync.WaitGroup, addr string, certFile string
 
 	defer wg.Done()
 
-	http.HandleFunc("/", hs.defaultHandler)
-	http.HandleFunc(wsPath, hs.wsHandler)
-	http.HandleFunc(h2Path, hs.h2Handler)
-	http.HandleFunc(hcPath, hs.hcHandler)
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == wsPath {
+			hs.wsHandler(w, r)
+		} else if r.URL.Path == h2Path {
+			hs.h2Handler(w, r)
+		} else if r.URL.Path == hcPath {
+			hs.hcHandler(w, r)
+		} else {
+			hs.defaultHandler(w, r)
+		}
+	})
 
-	elog.Error(http.ListenAndServeTLS(addr, certFile, keyFile, nil))
+	server := &http.Server{
+		Addr:    addr,
+		Handler: handler,
+	}
+	elog.Error(server.ListenAndServeTLS(certFile, keyFile))
 }
 
 func (hs *HttpServer) respError(status int, w http.ResponseWriter) {
