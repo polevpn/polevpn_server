@@ -32,7 +32,7 @@ func NewKCPConn(conn *kcp.UDPSession, downlimit uint64, uplimit uint64, handler 
 	return &KCPConn{
 		conn:         conn,
 		closed:       false,
-		wch:          make(chan []byte, CH_HTTP2_WRITE_SIZE),
+		wch:          make(chan []byte, CH_KCP_WRITE_SIZE),
 		handler:      handler,
 		downlimit:    downlimit,
 		uplimit:      uplimit,
