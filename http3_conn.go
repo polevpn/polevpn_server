@@ -4,21 +4,23 @@ import (
 	"encoding/binary"
 	"io"
 	"math/rand"
+	"sync"
 	"time"
 
 	"github.com/polevpn/elog"
+	"github.com/polevpn/h3conn"
 	"github.com/polevpn/netstack/tcpip/header"
 	"github.com/polevpn/netstack/tcpip/transport/tcp"
 	"github.com/polevpn/netstack/tcpip/transport/udp"
-	"github.com/xtaci/kcp-go/v5"
 )
 
 const (
-	CH_KCP_WRITE_SIZE = 2000
+	CH_h3cP_WRITE_SIZE = 2000
 )
 
-type KCPConn struct {
-	conn         *kcp.UDPSession
+type Http3Conn struct {
+	wg           *sync.WaitGroup
+	conn         *h3conn.Conn
 	wch          chan []byte
 	closed       bool
 	handler      *RequestHandler
@@ -28,11 +30,12 @@ type KCPConn struct {
 	tcUpStream   *TrafficCounter
 }
 
-func NewKCPConn(conn *kcp.UDPSession, downlimit uint64, uplimit uint64, handler *RequestHandler) *KCPConn {
-	return &KCPConn{
+func NewHttp3Conn(wg *sync.WaitGroup, conn *h3conn.Conn, downlimit uint64, uplimit uint64, handler *RequestHandler) *Http3Conn {
+	return &Http3Conn{
+		wg:           wg,
 		conn:         conn,
 		closed:       false,
-		wch:          make(chan []byte, CH_KCP_WRITE_SIZE),
+		wch:          make(chan []byte, CH_h3cP_WRITE_SIZE),
 		handler:      handler,
 		downlimit:    downlimit,
 		uplimit:      uplimit,
@@ -41,37 +44,37 @@ func NewKCPConn(conn *kcp.UDPSession, downlimit uint64, uplimit uint64, handler 
 	}
 }
 
-func (kc *KCPConn) Close(flag bool) error {
-	if kc.closed == false {
-		kc.closed = true
-		if kc.wch != nil {
-			kc.wch <- nil
-			close(kc.wch)
+func (h3c *Http3Conn) Close(flag bool) error {
+	if h3c.closed == false {
+		h3c.closed = true
+		if h3c.wch != nil {
+			h3c.wch <- nil
+			close(h3c.wch)
 		}
-		err := kc.conn.Close()
+		err := h3c.conn.Close()
 		if flag {
-			go kc.handler.OnClosed(kc, false)
+			go h3c.handler.OnClosed(h3c, false)
 		}
 		return err
 	}
 	return nil
 }
 
-func (kc *KCPConn) String() string {
-	return kc.conn.RemoteAddr().String() + "->" + kc.conn.LocalAddr().String()
+func (h3c *Http3Conn) String() string {
+	return h3c.conn.RemoteAddr().String() + "->" + h3c.conn.LocalAddr().String()
 }
 
-func (kc *KCPConn) IsClosed() bool {
-	return kc.closed
+func (h3c *Http3Conn) IsClosed() bool {
+	return h3c.closed
 }
 
-func (kc *KCPConn) checkStreamLimit(pkt []byte, tfcounter *TrafficCounter, limit uint64) (bool, time.Duration) {
+func (h3c *Http3Conn) checkStreamLimit(pkt []byte, tfcounter *TrafficCounter, limit uint64) (bool, time.Duration) {
 	bytes, ltime := tfcounter.StreamCount(uint64(len(pkt)))
 	if bytes > limit/(1000/uint64(tfcounter.StreamCountInterval()/time.Millisecond)) {
 		duration := ltime.Add(tfcounter.StreamCountInterval()).Sub(time.Now())
 		if duration > 0 {
 			drop := false
-			if len(kc.wch) > CH_WEBSOCKET_WRITE_SIZE*0.5 {
+			if len(h3c.wch) > CH_WEBSOCKET_WRITE_SIZE*0.5 {
 				ippkt := header.IPv4(pkt)
 				if ippkt.Protocol() == uint8(tcp.ProtocolNumber) {
 					n := rand.Intn(5)
@@ -96,9 +99,11 @@ func (kc *KCPConn) checkStreamLimit(pkt []byte, tfcounter *TrafficCounter, limit
 	return false, 0
 }
 
-func (kc *KCPConn) Read() {
+func (h3c *Http3Conn) Read() {
+
 	defer func() {
-		kc.Close(true)
+		h3c.wg.Done()
+		h3c.Close(true)
 	}()
 
 	defer PanicHandler()
@@ -108,12 +113,12 @@ func (kc *KCPConn) Read() {
 		prefetch := make([]byte, 2)
 
 		for {
-			n, err := kc.conn.Read(prefetch[preOffset:])
+			n, err := h3c.conn.Read(prefetch[preOffset:])
 			if err != nil {
 				if err == io.ErrUnexpectedEOF || err == io.EOF {
-					elog.Info(kc.String(), "conn closed")
+					elog.Info(h3c.String(), "conn closed")
 				} else {
-					elog.Error(kc.String(), "conn read exception:", err)
+					elog.Error(h3c.String(), "conn read exception:", err)
 				}
 				return
 			}
@@ -134,12 +139,12 @@ func (kc *KCPConn) Read() {
 		copy(pkt, prefetch)
 		var offset uint16 = 2
 		for {
-			n, err := kc.conn.Read(pkt[offset:])
+			n, err := h3c.conn.Read(pkt[offset:])
 			if err != nil {
 				if err == io.ErrUnexpectedEOF || err == io.EOF {
-					elog.Info(kc.String(), "conn closed")
+					elog.Info(h3c.String(), "conn closed")
 				} else {
-					elog.Error(kc.String(), "conn read exception:", err)
+					elog.Error(h3c.String(), "conn read exception:", err)
 				}
 				return
 			}
@@ -152,7 +157,7 @@ func (kc *KCPConn) Read() {
 		ppkt := PolePacket(pkt)
 		if ppkt.Cmd() == CMD_C2S_IPDATA {
 			//traffic limit
-			limit, duration := kc.checkStreamLimit(ppkt.Payload(), kc.tcUpStream, kc.uplimit)
+			limit, duration := h3c.checkStreamLimit(ppkt.Payload(), h3c.tcUpStream, h3c.uplimit)
 			if limit {
 				if duration > 0 {
 					time.Sleep(duration)
@@ -161,32 +166,33 @@ func (kc *KCPConn) Read() {
 				}
 			}
 		}
-		kc.handler.OnRequest(pkt, kc)
+		h3c.handler.OnRequest(pkt, h3c)
 
 	}
 
 }
 
-func (kc *KCPConn) Write() {
+func (h3c *Http3Conn) Write() {
 
+	defer h3c.wg.Done()
 	defer PanicHandler()
 
 	for {
 
-		pkt, ok := <-kc.wch
+		pkt, ok := <-h3c.wch
 		if !ok {
-			elog.Error(kc.String(), "get pkt from write channel fail,maybe channel closed")
+			elog.Error(h3c.String(), "get pkt from write channel fail,maybe channel closed")
 			return
 		}
 		if pkt == nil {
-			elog.Info(kc.String(), "exit write process")
+			elog.Info(h3c.String(), "exit write process")
 			return
 		}
 
 		ppkt := PolePacket(pkt)
 		if ppkt.Cmd() == CMD_S2C_IPDATA {
 			//traffic limit
-			limit, duration := kc.checkStreamLimit(ppkt.Payload(), kc.tcDownStream, kc.downlimit)
+			limit, duration := h3c.checkStreamLimit(ppkt.Payload(), h3c.tcDownStream, h3c.downlimit)
 			if limit {
 				if duration > 0 {
 					time.Sleep(duration)
@@ -195,23 +201,23 @@ func (kc *KCPConn) Write() {
 				}
 			}
 		}
-		_, err := kc.conn.Write(pkt)
+		_, err := h3c.conn.Write(pkt)
 		if err != nil {
 			if err == io.EOF || err == io.ErrUnexpectedEOF {
-				elog.Info(kc.String(), "conn closed")
+				elog.Info(h3c.String(), "conn closed")
 			} else {
-				elog.Error(kc.String(), "conn write exception:", err)
+				elog.Error(h3c.String(), "conn write exception:", err)
 			}
 			return
 		}
 	}
 }
 
-func (kc *KCPConn) Send(pkt []byte) {
-	if kc.closed == true {
+func (h3c *Http3Conn) Send(pkt []byte) {
+	if h3c.closed == true {
 		return
 	}
-	if kc.wch != nil {
-		kc.wch <- pkt
+	if h3c.wch != nil {
+		h3c.wch <- pkt
 	}
 }

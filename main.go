@@ -4,9 +4,7 @@ import (
 	"flag"
 	"os"
 	"os/signal"
-	"runtime"
 	"syscall"
-	"time"
 
 	"github.com/polevpn/anyvalue"
 	"github.com/polevpn/elog"
@@ -46,14 +44,6 @@ func main() {
 	defer elog.Flush()
 	signalHandler()
 
-	go func() {
-		for range time.NewTicker(time.Minute).C {
-			m := runtime.MemStats{}
-			runtime.ReadMemStats(&m)
-			elog.Printf("memory=%v,goroutines=%v", m.HeapAlloc, runtime.NumGoroutine())
-		}
-	}()
-
 	var err error
 
 	Config, err = GetConfig(configPath)
@@ -62,6 +52,6 @@ func main() {
 	}
 	err = NewPoleVPNServer().Start(Config)
 	if err != nil {
-		elog.Fatal("start polevpn server fail", err)
+		elog.Fatal("start polevpn server fail,", err)
 	}
 }

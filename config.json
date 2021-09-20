@@ -1,23 +1,16 @@
 {
-    "http":{
-        "enable":true,
-        "listen":"0.0.0.0:80",
+    "endpoint":{
         "ws_path":"/ws",
-        "h2_path":"/h2",
-        "hc_path":"/hc",
-        "tls_enable":true,
-        "tls_listen":"0.0.0.0:443",
+        "h3_path":"/h3",
+        "listen":"0.0.0.0:443",
         "cert_file":"./keys/server.crt",
         "key_file":"./keys/server.key"
     },
-    "kcp":{
-        "listen":"0.0.0.0:443",
-        "enable":true
-    },
     "network_cidr":"10.8.0.0/16",
     "dns_server":"223.5.5.5",
-    "upstream_traffic_limit":5242880,
-    "downstream_traffic_limit":10485760,
+    "route":["1/8", "2/7", "4/6", "8/5", "16/4", "32/3", "64/2", "128.0/1"],
+    "upstream_traffic_limit":52428800,
+    "downstream_traffic_limit":104857600,
     "auth":{
         "local":{
             "users":[
