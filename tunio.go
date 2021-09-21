@@ -10,14 +10,11 @@ import (
 )
 
 type TunIO struct {
-	ifce      *water.Interface
-	wch       chan []byte
-	mtu       int
-	handler   *PacketDispatcher
-	tfcounter *TrafficCounter
-	closed    bool
-	uplimit   uint64
-	downlimit uint64
+	ifce    *water.Interface
+	wch     chan []byte
+	mtu     int
+	handler *PacketDispatcher
+	closed  bool
 }
 
 func NewTunIO(size int, handler *PacketDispatcher) (*TunIO, error) {
@@ -72,7 +69,7 @@ func (t *TunIO) AddRoute(cidr string, gw string) error {
 }
 
 func (t *TunIO) Close() error {
-	if t.closed == true {
+	if t.closed {
 		return nil
 	}
 

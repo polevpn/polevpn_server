@@ -2,19 +2,22 @@
     "endpoint":{
         "ws_path":"/ws",
         "h3_path":"/h3",
-        "listen":"0.0.0.0:443",
+        "listen":"0.0.0.0:8443",
         "cert_file":"./keys/server.crt",
         "key_file":"./keys/server.key"
     },
     "network_cidr":"10.8.0.0/16",
     "dns_server":"223.5.5.5",
-    "route":["1/8", "2/7", "4/6", "8/5", "16/4", "32/3", "64/2", "128.0/1"],
+    "client_route":["1/8", "2/7", "4/6", "8/5", "16/4", "32/3", "64/2", "128.0/1"],
+    "server_route":[{"cidr":"192.168.1.0/24","gw":"10.8.3.5"},{"cidr":"192.168.10.0/24","gw":"10.8.3.6"}],
+    "bind_ip":[{"user":"starjiang","ip":"10.8.3.5"},{"user":"starjiang2","ip":"10.8.3.6"}],
     "upstream_traffic_limit":52428800,
     "downstream_traffic_limit":104857600,
     "auth":{
         "local":{
             "users":[
-                {"user":"starjiang","pwd":"123456"}
+                {"user":"starjiang","pwd":"123456"},
+                {"user":"starjiang2","pwd":"123456"}
             ]
         }
     }

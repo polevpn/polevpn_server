@@ -33,7 +33,7 @@ func TestCIDRAdress(t *testing.T) {
 }
 
 func TestCIDRAdressPool(t *testing.T) {
-	pool, err := NewAddressPool("10.8.0.0/16")
+	pool, err := NewAddressPool("10.8.0.0/16", map[string]string{})
 	if err != nil {
 		t.Fatal(err)
 	}

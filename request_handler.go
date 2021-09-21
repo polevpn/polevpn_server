@@ -3,11 +3,13 @@ package main
 import (
 	"github.com/polevpn/anyvalue"
 	"github.com/polevpn/elog"
+	"github.com/polevpn/netstack/tcpip/header"
 )
 
 type RequestHandler struct {
-	tunio   *TunIO
-	connmgr *ConnMgr
+	tunio     *TunIO
+	connmgr   *ConnMgr
+	routermgr *RouterMgr
 }
 
 func NewRequestHandler() *RequestHandler {
@@ -21,6 +23,10 @@ func (r *RequestHandler) SetTunIO(tunio *TunIO) {
 
 func (r *RequestHandler) SetConnMgr(connmgr *ConnMgr) {
 	r.connmgr = connmgr
+}
+
+func (r *RequestHandler) SetRouterMgr(routermgr *RouterMgr) {
+	r.routermgr = routermgr
 }
 
 func (r *RequestHandler) OnRequest(pkt []byte, conn Conn) {
@@ -59,15 +65,20 @@ func (r *RequestHandler) OnConnection(conn Conn, user string, ip string) {
 func (r *RequestHandler) handleAllocIPAddress(pkt PolePacket, conn Conn) {
 	av := anyvalue.New()
 
-	ip := r.connmgr.AllocAddress()
+	user := r.connmgr.GetConnAttachUser(conn)
+	ip := r.connmgr.GetBindIP(user)
 
 	if ip == "" {
-		elog.Error("ip alloc fail,no more ip address")
+		ip = r.connmgr.AllocAddress()
+		if ip == "" {
+			elog.Error("ip alloc fail,no more ip address")
+		}
 	}
+
 	elog.Infof("alloc ip %v to %v", ip, conn.String())
 	av.Set("ip", ip)
 	av.Set("dns", Config.Get("dns_server").AsStr())
-	av.Set("route", Config.Get("route").AsStrArr())
+	av.Set("route", Config.Get("client_route").AsStrArr())
 	body, _ := av.MarshalJSON()
 	buf := make([]byte, POLE_PACKET_HEADER_LEN+len(body))
 	copy(buf[POLE_PACKET_HEADER_LEN:], body)
@@ -84,10 +95,24 @@ func (r *RequestHandler) handleAllocIPAddress(pkt PolePacket, conn Conn) {
 
 func (r *RequestHandler) handleC2SIPData(pkt PolePacket, conn Conn) {
 
-	if r.tunio != nil {
-		err := r.tunio.Enqueue(pkt[POLE_PACKET_HEADER_LEN:])
-		if err != nil {
-			elog.Error("tunio enqueue fail", err)
+	ipv4pkg := header.IPv4(pkt.Payload())
+	dstIp := ipv4pkg.DestinationAddress().To4()
+	dstIpStr := dstIp.String()
+
+	elog.Debug("received pkt to ", dstIpStr)
+
+	gw := r.routermgr.FindRoute(dstIpStr)
+	toconn := r.connmgr.GetConnByIP(gw)
+
+	if toconn != nil {
+		pkt.SetCmd(CMD_S2C_IPDATA)
+		toconn.Send(pkt)
+	} else {
+		if r.tunio != nil {
+			err := r.tunio.Enqueue(pkt[POLE_PACKET_HEADER_LEN:])
+			if err != nil {
+				elog.Error("tunio enqueue fail", err)
+			}
 		}
 	}
 }

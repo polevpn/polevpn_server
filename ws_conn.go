@@ -42,7 +42,7 @@ func NewWebSocketConn(conn *websocket.Conn, downlimit uint64, uplimit uint64, ha
 }
 
 func (wsc *WebSocketConn) Close(flag bool) error {
-	if wsc.closed == false {
+	if !wsc.closed  {
 		wsc.closed = true
 		if wsc.wch != nil {
 			wsc.wch <- nil
@@ -175,7 +175,7 @@ func (wsc *WebSocketConn) Write() {
 }
 
 func (wsc *WebSocketConn) Send(pkt []byte) {
-	if wsc.closed == true {
+	if wsc.closed {
 		return
 	}
 	if wsc.wch != nil {

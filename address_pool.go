@@ -6,13 +6,21 @@ import (
 )
 
 type AddressPool struct {
-	pool    map[string]bool
-	mutex   *sync.Mutex
-	gw      string
-	network *net.IPNet
+	pool     map[string]bool
+	bindips  map[string]string
+	rbindips map[string]string
+	mutex    *sync.Mutex
+	gw       string
+	network  *net.IPNet
 }
 
-func NewAddressPool(cidr string) (*AddressPool, error) {
+func NewAddressPool(cidr string, bindips map[string]string) (*AddressPool, error) {
+
+	rbindips := make(map[string]string)
+
+	for user, ip := range bindips {
+		rbindips[ip] = user
+	}
 
 	_, network, err := net.ParseCIDR(cidr)
 	if err != nil {
@@ -41,15 +49,21 @@ func NewAddressPool(cidr string) (*AddressPool, error) {
 			gw = start.String()
 			continue
 		}
-		pool[start.String()] = false
+		_, ok := rbindips[start.String()]
+		if ok {
+			pool[start.String()] = true
+		} else {
+			pool[start.String()] = false
+		}
+
 	}
-	return &AddressPool{pool: pool, mutex: &sync.Mutex{}, gw: gw, network: network}, nil
+	return &AddressPool{pool: pool, mutex: &sync.Mutex{}, gw: gw, network: network, bindips: bindips, rbindips: rbindips}, nil
 }
 
 func (ap *AddressPool) Alloc() string {
 
 	for ip, used := range ap.pool {
-		if used == false {
+		if !used {
 			ap.pool[ip] = true
 			return ip
 		}
@@ -70,6 +84,14 @@ func (ap *AddressPool) Release(ip string) {
 	if ok {
 		ap.pool[ip] = false
 	}
+}
+
+func (ap *AddressPool) GetBindIP(user string) string {
+	return ap.bindips[user]
+}
+
+func (ap *AddressPool) GetBindUser(ip string) string {
+	return ap.rbindips[ip]
 }
 
 func (ap *AddressPool) IsAlloc(ip string) bool {

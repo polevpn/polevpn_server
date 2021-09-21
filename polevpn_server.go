@@ -16,12 +16,29 @@ func NewPoleVPNServer() *PoleVPNServer {
 
 func (ps *PoleVPNServer) Start(config *anyvalue.AnyValue) error {
 	var err error
+	bindips := make(map[string]string)
+	bindiparr := config.Get("bind_ip").AsArray()
+	for _, bindip := range bindiparr {
+		bindip, ok := bindip.(map[string]interface{})
+		if ok {
+			bindips[bindip["user"].(string)] = bindip["ip"].(string)
+		}
+	}
 
-	addresspool, err := NewAddressPool(config.Get("network_cidr").AsStr())
+	addresspool, err := NewAddressPool(config.Get("network_cidr").AsStr(), bindips)
 
 	if err != nil {
 		elog.Error("new address pool", err)
 		return err
+	}
+
+	routermgr := NewRouterMgr()
+	routes := config.Get("server_route").AsArray()
+	for _, route := range routes {
+		route, ok := route.(map[string]interface{})
+		if ok {
+			routermgr.AddRoute(route["cidr"].(string), route["gw"].(string))
+		}
 	}
 
 	connmgr := NewConnMgr()
@@ -67,6 +84,7 @@ func (ps *PoleVPNServer) Start(config *anyvalue.AnyValue) error {
 	requestHandler := NewRequestHandler()
 	requestHandler.SetTunIO(tunio)
 	requestHandler.SetConnMgr(connmgr)
+	requestHandler.SetRouterMgr(routermgr)
 
 	upstream := config.Get("upstream_traffic_limit").AsUint64()
 	downstream := config.Get("downstream_traffic_limit").AsUint64()

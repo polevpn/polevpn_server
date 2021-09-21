@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	CH_h3cP_WRITE_SIZE = 2000
+	CH_H3C_WRITE_SIZE = 2000
 )
 
 type Http3Conn struct {
@@ -35,7 +35,7 @@ func NewHttp3Conn(wg *sync.WaitGroup, conn *h3conn.Conn, downlimit uint64, uplim
 		wg:           wg,
 		conn:         conn,
 		closed:       false,
-		wch:          make(chan []byte, CH_h3cP_WRITE_SIZE),
+		wch:          make(chan []byte, CH_H3C_WRITE_SIZE),
 		handler:      handler,
 		downlimit:    downlimit,
 		uplimit:      uplimit,
@@ -45,7 +45,7 @@ func NewHttp3Conn(wg *sync.WaitGroup, conn *h3conn.Conn, downlimit uint64, uplim
 }
 
 func (h3c *Http3Conn) Close(flag bool) error {
-	if h3c.closed == false {
+	if !h3c.closed {
 		h3c.closed = true
 		if h3c.wch != nil {
 			h3c.wch <- nil
@@ -214,7 +214,7 @@ func (h3c *Http3Conn) Write() {
 }
 
 func (h3c *Http3Conn) Send(pkt []byte) {
-	if h3c.closed == true {
+	if h3c.closed  {
 		return
 	}
 	if h3c.wch != nil {

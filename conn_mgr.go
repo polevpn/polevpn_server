@@ -91,6 +91,10 @@ func (cm *ConnMgr) RelelaseAddress(ip string) {
 	if cm.addresspool == nil {
 		return
 	}
+	user := cm.addresspool.GetBindUser(ip)
+	if user != "" {
+		return
+	}
 	delete(cm.ip2actives, ip)
 	cm.addresspool.Release(ip)
 }
@@ -104,6 +108,28 @@ func (cm *ConnMgr) IsAllocedAddress(ip string) bool {
 		return false
 	}
 	return cm.addresspool.IsAlloc(ip)
+}
+
+func (cm *ConnMgr) GetBindUser(ip string) string {
+
+	cm.mutex.Lock()
+	defer cm.mutex.Unlock()
+
+	if cm.addresspool == nil {
+		return ""
+	}
+	return cm.addresspool.GetBindUser(ip)
+}
+
+func (cm *ConnMgr) GetBindIP(user string) string {
+
+	cm.mutex.Lock()
+	defer cm.mutex.Unlock()
+
+	if cm.addresspool == nil {
+		return ""
+	}
+	return cm.addresspool.GetBindIP(user)
 }
 
 func (cm *ConnMgr) UpdateConnActiveTime(conn Conn) {
