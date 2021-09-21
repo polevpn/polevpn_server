@@ -69,7 +69,7 @@ func (rm *RouterMgr) DelRoute(cidr string) {
 
 }
 
-func (rm *RouterMgr) FindRoute(destIP string) string {
+func (rm *RouterMgr) FindRoute(destIP net.IP) string {
 
 	rm.mutex.RLock()
 	defer rm.mutex.RUnlock()

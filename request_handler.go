@@ -1,6 +1,8 @@
 package main
 
 import (
+	"net"
+
 	"github.com/polevpn/anyvalue"
 	"github.com/polevpn/elog"
 	"github.com/polevpn/netstack/tcpip/header"
@@ -97,8 +99,12 @@ func (r *RequestHandler) handleC2SIPData(pkt PolePacket, conn Conn) {
 
 	elog.Debug("received pkt to ", dstIpStr)
 
-	gw := r.routermgr.FindRoute(dstIpStr)
-	toconn := r.connmgr.GetConnByIP(gw)
+	toconn := r.connmgr.GetConnByIP(dstIpStr)
+
+	if toconn == nil {
+		gw := r.routermgr.FindRoute(net.IP(dstIp))
+		toconn = r.connmgr.GetConnByIP(gw)
+	}
 
 	if toconn != nil {
 		pkt.SetCmd(CMD_S2C_IPDATA)
