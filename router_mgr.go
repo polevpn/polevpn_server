@@ -2,18 +2,21 @@ package main
 
 import (
 	"net"
+	"sort"
 	"sync"
 )
 
 type RouterMgr struct {
-	routetable map[string]string
-	mutex      *sync.RWMutex
+	routetable  map[string]string
+	mutex       *sync.RWMutex
+	sortedtable []string
 }
 
 func NewRouterMgr() *RouterMgr {
 	rm := &RouterMgr{
-		routetable: make(map[string]string),
-		mutex:      &sync.RWMutex{},
+		routetable:  make(map[string]string),
+		mutex:       &sync.RWMutex{},
+		sortedtable: make([]string, 0),
 	}
 	return rm
 }
@@ -29,6 +32,14 @@ func (rm *RouterMgr) AddRoute(cidr string, gw string) bool {
 	}
 
 	rm.routetable[cidr] = gw
+
+	var sortedtable []string
+	for k := range rm.routetable {
+		sortedtable = append(sortedtable, k)
+	}
+
+	sort.Strings(sortedtable)
+	rm.sortedtable = sortedtable
 
 	return true
 }
@@ -47,6 +58,15 @@ func (rm *RouterMgr) DelRoute(cidr string) {
 	defer rm.mutex.Unlock()
 
 	delete(rm.routetable, cidr)
+
+	var sortedtable []string
+	for k := range rm.routetable {
+		sortedtable = append(sortedtable, k)
+	}
+
+	sort.Strings(sortedtable)
+	rm.sortedtable = sortedtable
+
 }
 
 func (rm *RouterMgr) FindRoute(destIP string) string {
@@ -55,13 +75,15 @@ func (rm *RouterMgr) FindRoute(destIP string) string {
 	defer rm.mutex.RUnlock()
 
 	var defaultGateway string
-	for route, gw := range rm.routetable {
+	for _, route := range rm.sortedtable {
 
 		_, subnet, err := net.ParseCIDR(route)
 
 		if err != nil {
 			continue
 		}
+		gw := rm.routetable[route]
+
 		find := subnet.Contains(net.IP(destIP))
 		if route == "0.0.0.0/0" {
 			defaultGateway = gw

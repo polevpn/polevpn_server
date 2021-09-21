@@ -65,14 +65,10 @@ func (r *RequestHandler) OnConnection(conn Conn, user string, ip string) {
 func (r *RequestHandler) handleAllocIPAddress(pkt PolePacket, conn Conn) {
 	av := anyvalue.New()
 
-	user := r.connmgr.GetConnAttachUser(conn)
-	ip := r.connmgr.GetBindIP(user)
+	ip := r.connmgr.AllocAddress(conn)
 
 	if ip == "" {
-		ip = r.connmgr.AllocAddress()
-		if ip == "" {
-			elog.Error("ip alloc fail,no more ip address")
-		}
+		elog.Error("ip alloc fail,no more ip address")
 	}
 
 	elog.Infof("alloc ip %v to %v", ip, conn.String())

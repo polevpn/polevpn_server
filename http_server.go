@@ -17,7 +17,6 @@ const (
 
 type HttpServer struct {
 	requestHandler *RequestHandler
-	connMgr        *ConnMgr
 	loginchecker   LoginChecker
 	upgrader       *websocket.Upgrader
 	uplimit        uint64
