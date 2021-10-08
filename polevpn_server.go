@@ -98,13 +98,8 @@ func (ps *PoleVPNServer) Start(config *anyvalue.AnyValue) error {
 		config.Get("endpoint.listen").AsStr(),
 		config.Get("endpoint.cert_file").AsStr(),
 		config.Get("endpoint.key_file").AsStr(),
-		config.Get("endpoint.ws_path").AsStr(),
-		config.Get("endpoint.h3_path").AsStr(),
 	)
-	elog.Infof("listen https %v,[websocket %v],[http3 %v]",
-		config.Get("endpoint.listen").AsStr(),
-		config.Get("endpoint.ws_path").AsStr(),
-		config.Get("endpoint.h3_path").AsStr())
+	elog.Infof("listen https at %v", config.Get("endpoint.listen").AsStr())
 
 	wg.Wait()
 

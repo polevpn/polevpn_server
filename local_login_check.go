@@ -1,10 +1,5 @@
 package main
 
-import (
-	"encoding/base64"
-	"encoding/json"
-)
-
 const (
 	MAX_PASSWORD_LENGHT = 16
 )
@@ -26,15 +21,11 @@ func NewLocalLoginChecker() *LocalLoginChecker {
 
 func (llc *LocalLoginChecker) CheckLogin(user string, pwd string) bool {
 
-	if len(pwd) > MAX_PASSWORD_LENGHT {
-		return llc.checkLoginByToken(user, pwd)
-	} else {
-		return llc.checkLoginByPassword(user, pwd)
-	}
+	return llc.checkLoginByPassword(user, pwd)
 }
 
 func (llc *LocalLoginChecker) checkLoginByPassword(user string, pwd string) bool {
-	users := Config.Get("auth.local.users").AsArray()
+	users := Config.Get("auth.users").AsArray()
 
 	for _, u := range users {
 		u, ok := u.(map[string]interface{})
@@ -45,27 +36,4 @@ func (llc *LocalLoginChecker) checkLoginByPassword(user string, pwd string) bool
 		}
 	}
 	return false
-}
-
-func (llc *LocalLoginChecker) checkLoginByToken(user string, pwd string) bool {
-
-	crypted, err := base64.StdEncoding.DecodeString(pwd)
-
-	if err != nil {
-		return false
-	}
-
-	origin, err := AesDecrypt(crypted, ServerAesKey)
-	if err != nil {
-		return false
-	}
-
-	userinfo := User{}
-	json.Unmarshal(origin, &userinfo)
-
-	if user != userinfo.Email {
-		return false
-	}
-
-	return true
 }

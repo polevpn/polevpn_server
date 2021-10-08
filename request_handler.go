@@ -83,7 +83,6 @@ func (r *RequestHandler) handleAllocIPAddress(pkt PolePacket, conn Conn) {
 	resppkt := PolePacket(buf)
 	resppkt.SetLen(uint16(len(buf)))
 	resppkt.SetCmd(pkt.Cmd())
-	resppkt.SetSeq(pkt.Seq())
 	conn.Send(resppkt)
 	if ip != "" {
 		r.connmgr.AttachIPAddressToConn(ip, conn)
@@ -124,7 +123,6 @@ func (r *RequestHandler) handleHeartBeat(pkt PolePacket, conn Conn) {
 	resppkt := PolePacket(buf)
 	resppkt.SetLen(POLE_PACKET_HEADER_LEN)
 	resppkt.SetCmd(CMD_HEART_BEAT)
-	resppkt.SetSeq(pkt.Seq())
 	conn.Send(resppkt)
 	r.connmgr.UpdateConnActiveTime(conn)
 }

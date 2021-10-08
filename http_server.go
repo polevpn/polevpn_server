@@ -43,15 +43,18 @@ func (hs *HttpServer) defaultHandler(w http.ResponseWriter, r *http.Request) {
 	hs.respError(http.StatusForbidden, w)
 }
 
-func (hs *HttpServer) ListenTLS(wg *sync.WaitGroup, addr string, certFile string, keyFile string, wsPath string, h3Path string) {
+func (hs *HttpServer) ListenTLS(wg *sync.WaitGroup, addr string, certFile string, keyFile string) {
 
 	defer wg.Done()
 
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == wsPath {
-			hs.wsHandler(w, r)
-		} else if r.URL.Path == h3Path {
-			hs.h3Handler(w, r)
+
+		if r.URL.Path == "/" {
+			if r.ProtoAtLeast(3, 0) {
+				hs.h3Handler(w, r)
+			} else {
+				hs.wsHandler(w, r)
+			}
 		} else {
 			hs.defaultHandler(w, r)
 		}
