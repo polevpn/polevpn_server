@@ -116,9 +116,9 @@ func (h3c *Http3Conn) Read() {
 			n, err := h3c.conn.Read(prefetch[preOffset:])
 			if err != nil {
 				if err == io.ErrUnexpectedEOF || err == io.EOF {
-					elog.Info(h3c.String(), "conn closed")
+					elog.Info(h3c.String(), " conn closed")
 				} else {
-					elog.Error(h3c.String(), "conn read exception:", err)
+					elog.Error(h3c.String(), " conn read exception:", err)
 				}
 				return
 			}
@@ -142,9 +142,9 @@ func (h3c *Http3Conn) Read() {
 			n, err := h3c.conn.Read(pkt[offset:])
 			if err != nil {
 				if err == io.ErrUnexpectedEOF || err == io.EOF {
-					elog.Info(h3c.String(), "conn closed")
+					elog.Info(h3c.String(), " conn closed")
 				} else {
-					elog.Error(h3c.String(), "conn read exception:", err)
+					elog.Error(h3c.String(), " conn read exception:", err)
 				}
 				return
 			}
@@ -181,11 +181,11 @@ func (h3c *Http3Conn) Write() {
 
 		pkt, ok := <-h3c.wch
 		if !ok {
-			elog.Error(h3c.String(), "get pkt from write channel fail,maybe channel closed")
+			elog.Error(h3c.String(), " get pkt from write channel fail,maybe channel closed")
 			return
 		}
 		if pkt == nil {
-			elog.Info(h3c.String(), "exit write process")
+			elog.Info(h3c.String(), " exit write process")
 			return
 		}
 
@@ -204,9 +204,9 @@ func (h3c *Http3Conn) Write() {
 		_, err := h3c.conn.Write(pkt)
 		if err != nil {
 			if err == io.EOF || err == io.ErrUnexpectedEOF {
-				elog.Info(h3c.String(), "conn closed")
+				elog.Info(h3c.String(), " conn closed")
 			} else {
-				elog.Error(h3c.String(), "conn write exception:", err)
+				elog.Error(h3c.String(), " conn write exception:", err)
 			}
 			return
 		}
@@ -214,7 +214,7 @@ func (h3c *Http3Conn) Write() {
 }
 
 func (h3c *Http3Conn) Send(pkt []byte) {
-	if h3c.closed  {
+	if h3c.closed {
 		return
 	}
 	if h3c.wch != nil {

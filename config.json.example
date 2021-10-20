@@ -21,9 +21,8 @@
             "timeout":5
         },
         "ldap":{
-            "host":"127.0.0.1:3377",
-            "user":"xxx",
-            "password":"xxxx"
+            "host":"ldap://127.0.0.1:389",
+            "dn":"CN=users,DC=polevpn,DC=com",
         }
     }
 }

@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/go-ldap/ldap"
 	"github.com/polevpn/anyvalue"
 )
 
@@ -92,6 +93,7 @@ func (llc *LocalLoginChecker) checkHttpLogin(user string, pwd string) error {
 	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		data, err := ioutil.ReadAll(resp.Body)
@@ -104,5 +106,20 @@ func (llc *LocalLoginChecker) checkHttpLogin(user string, pwd string) error {
 }
 
 func (llc *LocalLoginChecker) checkLDAPLogin(user string, pwd string) error {
-	return errors.New("user or password incorrect")
+
+	client, err := ldap.DialURL(Config.Get("auth.ldap.host").AsStr())
+	if err != nil {
+		return err
+	}
+	defer client.Close()
+
+	_, err = client.SimpleBind(&ldap.SimpleBindRequest{
+		Username: "CN=" + user + "," + Config.Get("auth.ldap.dn").AsStr(),
+		Password: pwd,
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

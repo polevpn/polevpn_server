@@ -15,6 +15,10 @@
         "users":[
             {"user":"starjiang","pwd":"123456"},
             {"user":"starjiang2","pwd":"123456"}
-        ]
+        ],
+        "ldap":{
+            "host":"ldap://hrtv.freemyip.com:389",
+            "dn":"CN=users,DC=polevpn,DC=com"
+        }
     }
 }

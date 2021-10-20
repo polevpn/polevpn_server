@@ -113,7 +113,7 @@ func (hs *HttpServer) h3Handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	elog.Info("accpet new h3 conn", conn.RemoteAddr().String())
+	elog.Info("accpet new h3 conn ", conn.RemoteAddr().String())
 	if hs.requestHandler == nil {
 		elog.Error("request dispatcher haven't set")
 		return
@@ -168,11 +168,11 @@ func (hs *HttpServer) wsHandler(w http.ResponseWriter, r *http.Request) {
 
 	conn, err := hs.upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		elog.Error("upgrade http request to ws fail", err)
+		elog.Error("upgrade http request to ws fail,", err)
 		return
 	}
 
-	elog.Info("accpet new ws conn", conn.RemoteAddr().String())
+	elog.Info("accpet new ws conn ", conn.RemoteAddr().String())
 	if hs.requestHandler == nil {
 		elog.Error("request dispatcher haven't set")
 		return

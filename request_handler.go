@@ -36,7 +36,7 @@ func (r *RequestHandler) OnRequest(pkt []byte, conn Conn) {
 	ppkt := PolePacket(pkt)
 	switch ppkt.Cmd() {
 	case CMD_ALLOC_IPADDR:
-		elog.Info("received alloc ip adress request from", conn.String())
+		elog.Info("received alloc ip adress request from ", conn.String())
 		r.handleAllocIPAddress(ppkt, conn)
 	case CMD_C2S_IPDATA:
 		r.handleC2SIPData(ppkt, conn)
@@ -112,7 +112,7 @@ func (r *RequestHandler) handleC2SIPData(pkt PolePacket, conn Conn) {
 		if r.tunio != nil {
 			err := r.tunio.Enqueue(pkt[POLE_PACKET_HEADER_LEN:])
 			if err != nil {
-				elog.Error("tunio enqueue fail", err)
+				elog.Error("tunio enqueue fail,", err)
 			}
 		}
 	}
@@ -128,20 +128,20 @@ func (r *RequestHandler) handleHeartBeat(pkt PolePacket, conn Conn) {
 }
 
 func (r *RequestHandler) handleClientClose(pkt PolePacket, conn Conn) {
-	elog.Info(conn.String(), "proactive close")
+	elog.Info(conn.String(), " proactive close")
 	r.connmgr.RelelaseAddress(r.connmgr.GeIPByConn(conn))
 }
 
 func (r *RequestHandler) OnClosed(conn Conn, proactive bool) {
 
-	elog.Info("connection closed event from", conn.String())
+	elog.Info("connection closed event from ", conn.String())
 
 	r.connmgr.DetachIPAddressFromConn(conn)
 	r.connmgr.DetachUserFromConn(conn)
 	r.connmgr.RemoveConn(conn.String())
 	//just process proactive close event
 	if proactive {
-		elog.Info(conn.String(), "proactive close")
+		elog.Info(conn.String(), " proactive close")
 		r.connmgr.RelelaseAddress(r.connmgr.GeIPByConn(conn))
 	}
 

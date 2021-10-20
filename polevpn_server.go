@@ -28,7 +28,7 @@ func (ps *PoleVPNServer) Start(config *anyvalue.AnyValue) error {
 	addresspool, err := NewAddressPool(config.Get("network_cidr").AsStr(), bindips)
 
 	if err != nil {
-		elog.Error("new address pool", err)
+		elog.Error("new address pool,", err)
 		return err
 	}
 
@@ -52,7 +52,7 @@ func (ps *PoleVPNServer) Start(config *anyvalue.AnyValue) error {
 	tunio, err := NewTunIO(CH_TUNIO_WRITE_SIZE, packetHandler)
 
 	if err != nil {
-		elog.Error("create tun fail", err)
+		elog.Error("create tun fail,", err)
 		return err
 	}
 
@@ -61,20 +61,20 @@ func (ps *PoleVPNServer) Start(config *anyvalue.AnyValue) error {
 	elog.Infof("set tun device ip %v", gwip)
 	err = tunio.SetIPAddress(gwip)
 	if err != nil {
-		elog.Error("set tun ip address fail", err)
+		elog.Error("set tun ip address fail,", err)
 		return err
 	}
 
 	elog.Info("enable tun device")
 	err = tunio.Enanble()
 	if err != nil {
-		elog.Error("enable tun fail", err)
+		elog.Error("enable tun fail,", err)
 		return err
 	}
 	elog.Infof("add route %v to %v", addresspool.GetNetwork(), gwip)
 	err = tunio.AddRoute(addresspool.GetNetwork(), gwip)
 	if err != nil {
-		elog.Error("set tun route fail", err)
+		elog.Error("set tun route fail,", err)
 		return err
 	}
 
