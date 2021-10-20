@@ -1,5 +1,15 @@
 package main
 
+import (
+	"bytes"
+	"errors"
+	"io/ioutil"
+	"net/http"
+	"time"
+
+	"github.com/polevpn/anyvalue"
+)
+
 const (
 	MAX_PASSWORD_LENGHT = 16
 )
@@ -19,21 +29,80 @@ func NewLocalLoginChecker() *LocalLoginChecker {
 	return &LocalLoginChecker{}
 }
 
-func (llc *LocalLoginChecker) CheckLogin(user string, pwd string) bool {
+func (llc *LocalLoginChecker) CheckLogin(user string, pwd string) error {
 
-	return llc.checkLoginByPassword(user, pwd)
+	var err error
+
+	if Config.Has("auth.users") {
+		err = llc.checkUserLogin(user, pwd)
+	}
+
+	if err == nil {
+		return nil
+	}
+
+	if Config.Has("auth.http") {
+		err = llc.checkHttpLogin(user, pwd)
+	}
+
+	if err == nil {
+		return nil
+	}
+
+	if Config.Has("auth.ldap") {
+		err = llc.checkLDAPLogin(user, pwd)
+	}
+
+	return err
+
 }
 
-func (llc *LocalLoginChecker) checkLoginByPassword(user string, pwd string) bool {
+func (llc *LocalLoginChecker) checkUserLogin(user string, pwd string) error {
+
 	users := Config.Get("auth.users").AsArray()
 
 	for _, u := range users {
 		u, ok := u.(map[string]interface{})
 		if ok {
 			if u["user"].(string) == user && u["pwd"].(string) == pwd {
-				return true
+				return nil
 			}
 		}
 	}
-	return false
+	return errors.New("user or password incorrect")
+}
+
+func (llc *LocalLoginChecker) checkHttpLogin(user string, pwd string) error {
+
+	req := anyvalue.New()
+
+	req.Set("user", user)
+	req.Set("pwd", pwd)
+	data, _ := req.EncodeJson()
+
+	client := http.Client{Timeout: time.Duration(Config.Get("auth.http.timeout").AsInt()) * time.Second}
+	request, err := http.NewRequest(http.MethodPost, Config.Get("auth.http.url").AsStr(), bytes.NewReader(data))
+
+	if err != nil {
+		return err
+	}
+
+	resp, err := client.Do(request)
+
+	if err != nil {
+		return err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		data, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return nil
+		}
+		return errors.New(string(data))
+	}
+	return nil
+}
+
+func (llc *LocalLoginChecker) checkLDAPLogin(user string, pwd string) error {
+	return errors.New("user or password incorrect")
 }

@@ -28,6 +28,7 @@ github.com/fsnotify/fsnotify v1.4.9/go.mod h1:znqG4EE+3YCdAaPaxE2ZRY/06pZUdp0tY4
 github.com/ghodss/yaml v1.0.0/go.mod h1:4dBDuWmgqj2HViK6kFavaiC9ZROes6MMH2rRYeMEF04=
 github.com/gliderlabs/ssh v0.1.1/go.mod h1:U7qILu1NlMHj9FlMhZLlkCdDnU1DBEAqr0aevW3Awn0=
 github.com/go-errors/errors v1.0.1/go.mod h1:f4zRHt4oKfwPJE5k8C9vpYG+aDHdBFUsgrm6/TyX73Q=
+github.com/go-task/slim-sprig v0.0.0-20210107165309-348f09dbbbc0 h1:p104kn46Q8WdvHunIJ9dAyjPVtrBPhSr3KT2yUst43I=
 github.com/go-task/slim-sprig v0.0.0-20210107165309-348f09dbbbc0/go.mod h1:fyg7847qk6SyHyPtNmDHnmrv/HOrqktSC+C9fM+CJOE=
 github.com/gogo/protobuf v1.1.1/go.mod h1:r8qH/GZQm5c6nD/R0oafs1akxWv10x8SbQlK7atdtwQ=
 github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b/go.mod h1:SBH7ygxi8pfUlaOkMMuAQtPIUF8ecWP5IEl/CR7VP2Q=
@@ -116,16 +117,24 @@ github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZb
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/polevpn/anyvalue v1.0.5 h1:oCOvz4YfFbUlpMUx/9sj4Bii7Pgz8OQ1kMe+6HYJWSw=
 github.com/polevpn/anyvalue v1.0.5/go.mod h1:SAmPKOT6BtaGar2NZc9u/TUZgDYBXO7lZZ9q1MU0LVk=
+github.com/polevpn/anyvalue v1.0.6 h1:IaAtj0ZkOfAqTd1K8rc5JvDt/qFsuivzrI4LXrYC4ic=
+github.com/polevpn/anyvalue v1.0.6/go.mod h1:SAmPKOT6BtaGar2NZc9u/TUZgDYBXO7lZZ9q1MU0LVk=
 github.com/polevpn/elog v1.0.9 h1:Kv5MEEFdBRsrrLGsAJuEEbr3zCCGM0qUo+2wkVviMm4=
 github.com/polevpn/elog v1.0.9/go.mod h1:u30sJGFE2hYV+KuEmE4Bw7Qh0J3eXS3AEXjyHtqPDjU=
+github.com/polevpn/elog v1.1.1 h1:+Nnyaajv//fbmVextCGrcFfZXi+isprA1qQag2dcwhE=
+github.com/polevpn/elog v1.1.1/go.mod h1:u30sJGFE2hYV+KuEmE4Bw7Qh0J3eXS3AEXjyHtqPDjU=
 github.com/polevpn/h3conn v1.0.1 h1:caU2wMK6YiqbJrt7vusGTALOvUG1JSSHwQB59UNMf+8=
 github.com/polevpn/h3conn v1.0.1/go.mod h1:yccwrs+deKaild79CkmVTyGoGPd2+4nQ2+4o9h9IMYY=
+github.com/polevpn/h3conn v1.0.10 h1:ZClWkWBCgF1ZbxwsB0c9ZMFQyc3LUze2iTdRTK6wGg8=
+github.com/polevpn/h3conn v1.0.10/go.mod h1:yccwrs+deKaild79CkmVTyGoGPd2+4nQ2+4o9h9IMYY=
 github.com/polevpn/netstack v1.10.2 h1:/Vlx/WegKc3Af7TjTRF7Hpi8v8rEJMg+SNleXJ9IzJw=
 github.com/polevpn/netstack v1.10.2/go.mod h1:bIZcO16BHlmfG7t56hqoXiodF2T3C+e+eUrdHypxrbc=
 github.com/polevpn/netstack v1.10.3 h1:yoReqTQX35BwDKJNd7d/t+QTjeZhr4uApnVi2ZQ6uTg=
 github.com/polevpn/netstack v1.10.3/go.mod h1:bIZcO16BHlmfG7t56hqoXiodF2T3C+e+eUrdHypxrbc=
 github.com/polevpn/water v1.0.1 h1:Qy9EauklrHwkUxL9Wy+lmjVH1l/x8VW7wLn0IW9DipY=
 github.com/polevpn/water v1.0.1/go.mod h1:L41gnrOhprREWmwx5yONXP3ABrQ8CJqXvgvD+6B1DsE=
+github.com/polevpn/water v1.0.4 h1:OCLCeKgdQwlh4J5GjR7zzsd8u+tJ/EN8XAZQ931V6PI=
+github.com/polevpn/water v1.0.4/go.mod h1:mc/yhflKH5xQ9HKP8e4Qra21Qoh2I1DXvu1vE0mGGkM=
 github.com/prometheus/client_golang v0.8.0/go.mod h1:7SWBe2y4D6OKWSNQJUaRYU/AaXPKyh/dDVn+NZz0KFw=
 github.com/prometheus/client_model v0.0.0-20180712105110-5c3871d89910/go.mod h1:MbSGuTsp3dbXC40dX6PRTWyKYBIrTGTE9sqQNg2J8bo=
 github.com/prometheus/common v0.0.0-20180801064454-c7de2306084e/go.mod h1:daVV7qP5qjZbuso7PdcryaAu0sAZbrN9i7WWcTMWvro=
@@ -185,6 +194,7 @@ golang.org/x/lint v0.0.0-20180702182130-06c8688daad7/go.mod h1:UVdnD1Gm6xHRNCYTk
 golang.org/x/lint v0.0.0-20181026193005-c67002cb31c3/go.mod h1:UVdnD1Gm6xHRNCYTkRU2/jEulfH38KcIWyp/GAMgvoE=
 golang.org/x/lint v0.0.0-20190227174305-5b3e6a55c961/go.mod h1:wehouNa3lNwaWXcvxsM5YxQ5yQlVC4a0KAMCusXpPoU=
 golang.org/x/mod v0.3.0/go.mod h1:s0Qsj1ACt9ePp/hMypM3fl4fZqREWJwdYDEqhRiZZUA=
+golang.org/x/mod v0.4.2 h1:Gz96sIWK3OalVv/I/qNygP42zyoKp3xptRVCWRFEBvo=
 golang.org/x/mod v0.4.2/go.mod h1:s0Qsj1ACt9ePp/hMypM3fl4fZqREWJwdYDEqhRiZZUA=
 golang.org/x/net v0.0.0-20180724234803-3673e40ba225/go.mod h1:mL1N/T3taQHkDXs73rZJwtUhF3w3ftmwwsq0BUmARs4=
 golang.org/x/net v0.0.0-20180826012351-8a410e7b638d/go.mod h1:mL1N/T3taQHkDXs73rZJwtUhF3w3ftmwwsq0BUmARs4=
@@ -236,6 +246,8 @@ golang.org/x/sys v0.0.0-20210330210617-4fbd30eecc44/go.mod h1:h1NjWce9XRLGQEsW7w
 golang.org/x/sys v0.0.0-20210423082822-04245dca01da/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20210510120138-977fb7262007 h1:gG67DSER+11cZvqIMb8S8bt0vZtiN6xWYARwirrOSfE=
 golang.org/x/sys v0.0.0-20210510120138-977fb7262007/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
+golang.org/x/sys v0.0.0-20211002104244-808efd93c36d h1:SABT8Vei3iTiu+Gy8KOzpSNz+W1EQ5YBCRtiEETxF+0=
+golang.org/x/sys v0.0.0-20211002104244-808efd93c36d/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 golang.org/x/term v0.0.0-20201126162022-7de9c90e9dd1/go.mod h1:bj7SfCRtBDWHUb9snDiAeCFNEtKQo2Wmx5Cou7ajbmo=
 golang.org/x/text v0.3.0/go.mod h1:NqM8EUOU14njkJ3fqMW+pc6Ldnwhi/IjpwHt7yyuwOQ=
 golang.org/x/text v0.3.1-0.20180807135948-17ff2d5776d2/go.mod h1:NqM8EUOU14njkJ3fqMW+pc6Ldnwhi/IjpwHt7yyuwOQ=
@@ -255,6 +267,7 @@ golang.org/x/tools v0.0.0-20190226205152-f727befe758c/go.mod h1:9Yl7xja0Znq3iFh3
 golang.org/x/tools v0.0.0-20190425150028-36563e24a262/go.mod h1:RgjU9mgBXZiqYHBnxXauZ1Gv1EHHAz9KjViQ78xBX0Q=
 golang.org/x/tools v0.0.0-20191119224855-298f0cb1881e/go.mod h1:b+2E5dAYhXwXZwtnZ6UAqBI28+e2cm9otk0dWdXHAEo=
 golang.org/x/tools v0.0.0-20201224043029-2b0845dc783e/go.mod h1:emZCQorbCU4vsT4fOWvOPXz4eW1wZW4PmDk9uLelYpA=
+golang.org/x/tools v0.1.1 h1:wGiQel/hW0NnEkJUk8lbzkX2gFJU6PFxf1v5OlCfuOs=
 golang.org/x/tools v0.1.1/go.mod h1:o0xws9oXOQQZyjljx8fwUC0k7L1pTE6eaCbjGeHmOkk=
 golang.org/x/xerrors v0.0.0-20190717185122-a985d3407aa7/go.mod h1:I/5z698sn9Ka8TeJc9MKroUUfqBBauWjQqLJ2OPfmY0=
 golang.org/x/xerrors v0.0.0-20191011141410-1b5146add898/go.mod h1:I/5z698sn9Ka8TeJc9MKroUUfqBBauWjQqLJ2OPfmY0=

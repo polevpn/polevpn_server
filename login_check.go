@@ -1,5 +1,5 @@
 package main
 
 type LoginChecker interface {
-	CheckLogin(user string, pwd string) bool
+	CheckLogin(user string, pwd string) error
 }

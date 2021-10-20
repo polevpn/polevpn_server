@@ -85,8 +85,9 @@ func (hs *HttpServer) h3Handler(w http.ResponseWriter, r *http.Request) {
 
 	elog.Infof("user:%v,pwd:%v,ip:%v connect", user, pwd, ip)
 
-	if !hs.loginchecker.CheckLogin(user, pwd) {
-		elog.Errorf("user:%v,pwd:%v,ip:%v verify fail", user, pwd, ip)
+	err := hs.loginchecker.CheckLogin(user, pwd)
+	if err != nil {
+		elog.Errorf("user:%v,pwd:%v,ip:%v verify fail,%v", user, pwd, ip, err)
 		hs.respError(http.StatusForbidden, w)
 		return
 	}
@@ -143,8 +144,9 @@ func (hs *HttpServer) wsHandler(w http.ResponseWriter, r *http.Request) {
 
 	elog.Infof("user:%v,pwd:%v,ip:%v connect", user, pwd, ip)
 
-	if !hs.loginchecker.CheckLogin(user, pwd) {
-		elog.Errorf("user:%v,pwd:%v,ip:%v verify fail", user, pwd, ip)
+	err := hs.loginchecker.CheckLogin(user, pwd)
+	if err != nil {
+		elog.Errorf("user:%v,pwd:%v,ip:%v verify fail,%v", user, pwd, ip, err)
 		hs.respError(http.StatusForbidden, w)
 		return
 	}
