@@ -17,7 +17,7 @@ func NewPoleVPNServer() *PoleVPNServer {
 func (ps *PoleVPNServer) Start(config *anyvalue.AnyValue) error {
 	var err error
 	bindips := make(map[string]string)
-	bindiparr := config.Get("bind_ip").AsArray()
+	bindiparr := config.Get("bind_ips").AsArray()
 	for _, bindip := range bindiparr {
 		bindip, ok := bindip.(map[string]interface{})
 		if ok {
@@ -33,7 +33,7 @@ func (ps *PoleVPNServer) Start(config *anyvalue.AnyValue) error {
 	}
 
 	routermgr := NewRouterMgr()
-	routes := config.Get("server_route").AsArray()
+	routes := config.Get("server_routes").AsArray()
 	for _, route := range routes {
 		route, ok := route.(map[string]interface{})
 		if ok {
@@ -86,8 +86,8 @@ func (ps *PoleVPNServer) Start(config *anyvalue.AnyValue) error {
 	requestHandler.SetConnMgr(connmgr)
 	requestHandler.SetRouterMgr(routermgr)
 
-	upstream := config.Get("upstream_traffic_limit").AsUint64()
-	downstream := config.Get("downstream_traffic_limit").AsUint64()
+	upstream := config.Get("up_traffic_limit").AsUint64()
+	downstream := config.Get("down_traffic_limit").AsUint64()
 
 	wg := &sync.WaitGroup{}
 

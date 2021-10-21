@@ -5,17 +5,16 @@
         "key_file":"./keys/server.key"
     },
     "network_cidr":"10.9.0.0/16",
-    "dns_server":"223.5.5.5",
-    "client_route":["1.0.0.0/8", "2.0.0.0/7", "4.0.0.0/6", "8.0.0.0/5", "16.0.0.0/4", "32.0.0.0/3", "64.0.0.0/2", "128.0.0.0/1"],
-    "server_route":[{"cidr":"192.168.1.0/24","gw":"10.9.3.6"}],
-    "bind_ip":[{"user":"starjiang","ip":"10.9.3.6"}],
-    "upstream_traffic_limit":52428800,
-    "downstream_traffic_limit":104857600,
+    "dns":"223.5.5.5",
+    "client_routes":["1.0.0.0/8", "2.0.0.0/7", "4.0.0.0/6", "8.0.0.0/5", "16.0.0.0/4", "32.0.0.0/3", "64.0.0.0/2", "128.0.0.0/1"],
+    "server_routes":[{"cidr":"192.168.1.0/24","gw":"10.9.3.6"}],
+    "bind_ips":[{"user":"starjiang","ip":"10.9.3.6"}],
+    "up_traffic_limit":52428800,
+    "down_traffic_limit":104857600,
     "auth":{
-        "users":[
-            {"user":"starjiang","pwd":"123456"},
-            {"user":"starjiang2","pwd":"123456"}
-        ],
+        "file":{
+            "path":"users.credentials"
+        },
         "ldap":{
             "host":"ldap://hrtv.freemyip.com:389",
             "dn":"CN=users,DC=polevpn,DC=com"

@@ -75,8 +75,8 @@ func (r *RequestHandler) handleAllocIPAddress(pkt PolePacket, conn Conn) {
 
 	elog.Infof("alloc ip %v to %v", ip, conn.String())
 	av.Set("ip", ip)
-	av.Set("dns", Config.Get("dns_server").AsStr())
-	av.Set("route", Config.Get("client_route").AsStrArr())
+	av.Set("dns", Config.Get("dns").AsStr())
+	av.Set("route", Config.Get("client_routes").AsStrArr())
 	body, _ := av.MarshalJSON()
 	buf := make([]byte, POLE_PACKET_HEADER_LEN+len(body))
 	copy(buf[POLE_PACKET_HEADER_LEN:], body)

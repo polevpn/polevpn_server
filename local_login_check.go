@@ -1,10 +1,14 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"errors"
+	"io"
 	"io/ioutil"
 	"net/http"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/go-ldap/ldap"
@@ -34,8 +38,8 @@ func (llc *LocalLoginChecker) CheckLogin(user string, pwd string) error {
 
 	var err error
 
-	if Config.Has("auth.users") {
-		err = llc.checkUserLogin(user, pwd)
+	if Config.Has("auth.file") {
+		err = llc.checkFileLogin(user, pwd)
 	}
 
 	if err == nil {
@@ -58,16 +62,29 @@ func (llc *LocalLoginChecker) CheckLogin(user string, pwd string) error {
 
 }
 
-func (llc *LocalLoginChecker) checkUserLogin(user string, pwd string) error {
+func (llc *LocalLoginChecker) checkFileLogin(user string, pwd string) error {
 
-	users := Config.Get("auth.users").AsArray()
+	filePath := Config.Get("auth.file.path").AsStr()
 
-	for _, u := range users {
-		u, ok := u.(map[string]interface{})
-		if ok {
-			if u["user"].(string) == user && u["pwd"].(string) == pwd {
-				return nil
-			}
+	f, err := os.Open(filePath)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	br := bufio.NewReader(f)
+	for {
+		line, _, c := br.ReadLine()
+		if c == io.EOF {
+			break
+		}
+		userPassword := strings.Trim(string(line), "\n\r")
+		userPasswordArr := strings.Split(userPassword, ",")
+		if len(userPasswordArr) != 2 {
+			continue
+		}
+		if userPasswordArr[0] == user && userPasswordArr[1] == pwd {
+			return nil
 		}
 	}
 	return errors.New("user or password incorrect")
