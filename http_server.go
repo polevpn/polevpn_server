@@ -83,6 +83,11 @@ func (hs *HttpServer) h3Handler(w http.ResponseWriter, r *http.Request) {
 	pwd := r.URL.Query().Get("pwd")
 	ip := r.URL.Query().Get("ip")
 
+	if user == "" || pwd == "" {
+		hs.respError(http.StatusForbidden, w)
+		return
+	}
+
 	elog.Infof("user:%v,pwd:%v,ip:%v connect", user, pwd, ip)
 
 	err := hs.loginchecker.CheckLogin(user, pwd)
@@ -141,6 +146,11 @@ func (hs *HttpServer) wsHandler(w http.ResponseWriter, r *http.Request) {
 	user := r.URL.Query().Get("user")
 	pwd := r.URL.Query().Get("pwd")
 	ip := r.URL.Query().Get("ip")
+
+	if user == "" || pwd == "" {
+		hs.respError(http.StatusForbidden, w)
+		return
+	}
 
 	elog.Infof("user:%v,pwd:%v,ip:%v connect", user, pwd, ip)
 
