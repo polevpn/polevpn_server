@@ -4,8 +4,12 @@ import (
 	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
+	"encoding/binary"
+	"errors"
+	"io"
 	"os"
 	"runtime/debug"
+	"strconv"
 
 	"github.com/polevpn/anyvalue"
 	"github.com/polevpn/elog"
@@ -54,6 +58,34 @@ func AesDecrypt(crypted, key []byte) ([]byte, error) {
 	blockMode.CryptBlocks(origData, crypted)
 	origData = Ph3cS7UnPadding(origData)
 	return origData, nil
+}
+
+func ReadPacket(conn io.Reader) ([]byte, error) {
+
+	prefetch := make([]byte, 2)
+
+	_, err := io.ReadFull(conn, prefetch)
+
+	if err != nil {
+		return nil, err
+	}
+
+	len := binary.BigEndian.Uint16(prefetch)
+
+	if len < POLE_PACKET_HEADER_LEN {
+		return nil, errors.New("invalid pkt len=" + strconv.Itoa(int(len)))
+	}
+
+	pkt := make([]byte, len)
+	copy(pkt, prefetch)
+
+	_, err = io.ReadFull(conn, pkt[2:])
+
+	if err != nil {
+		return nil, err
+	}
+
+	return pkt, nil
 }
 
 func GetConfig(configfile string) (*anyvalue.AnyValue, error) {

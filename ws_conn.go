@@ -1,7 +1,6 @@
 package main
 
 import (
-	"io"
 	"math/rand"
 	"time"
 
@@ -106,11 +105,8 @@ func (wsc *WebSocketConn) Read() {
 	for {
 		mtype, pkt, err := wsc.conn.ReadMessage()
 		if err != nil {
-			if err == io.ErrUnexpectedEOF || err == io.EOF {
-				elog.Info(wsc.String(), " conn closed")
-			} else {
-				elog.Error(wsc.String(), " conn read exception:", err)
-			}
+
+			elog.Error(wsc.String(), " wsconn read end,status=", err)
 			return
 		}
 		if mtype == websocket.BinaryMessage {
@@ -142,7 +138,7 @@ func (wsc *WebSocketConn) Write() {
 
 		pkt, ok := <-wsc.wch
 		if !ok {
-			elog.Error(wsc.String(), " get pkt from write channel fail,maybe channel closed")
+			elog.Error(wsc.String(), " channel closed")
 			return
 		}
 		if pkt == nil {
@@ -164,11 +160,7 @@ func (wsc *WebSocketConn) Write() {
 		}
 		err := wsc.conn.WriteMessage(websocket.BinaryMessage, pkt)
 		if err != nil {
-			if err == io.EOF || err == io.ErrUnexpectedEOF {
-				elog.Info(wsc.String(), " conn closed")
-			} else {
-				elog.Error(wsc.String(), " conn write exception:", err)
-			}
+			elog.Error(wsc.String(), " wsconn write end,status=", err)
 			return
 		}
 	}

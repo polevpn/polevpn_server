@@ -1,8 +1,6 @@
 package main
 
 import (
-	"encoding/binary"
-	"io"
 	"math/rand"
 	"sync"
 	"time"
@@ -109,49 +107,12 @@ func (h3c *Http3Conn) Read() {
 	defer PanicHandler()
 
 	for {
-		var preOffset = 0
-		prefetch := make([]byte, 2)
 
-		for {
-			n, err := h3c.conn.Read(prefetch[preOffset:])
-			if err != nil {
-				if err == io.ErrUnexpectedEOF || err == io.EOF {
-					elog.Info(h3c.String(), " conn closed")
-				} else {
-					elog.Error(h3c.String(), " conn read exception:", err)
-				}
-				return
-			}
-			preOffset += n
-			if preOffset >= 2 {
-				break
-			}
-		}
+		pkt, err := ReadPacket(h3c.conn)
 
-		len := binary.BigEndian.Uint16(prefetch)
-
-		if len < POLE_PACKET_HEADER_LEN {
-			elog.Error("invalid pkt len=", len)
-			continue
-		}
-
-		pkt := make([]byte, len)
-		copy(pkt, prefetch)
-		var offset uint16 = 2
-		for {
-			n, err := h3c.conn.Read(pkt[offset:])
-			if err != nil {
-				if err == io.ErrUnexpectedEOF || err == io.EOF {
-					elog.Info(h3c.String(), " conn closed")
-				} else {
-					elog.Error(h3c.String(), " conn read exception:", err)
-				}
-				return
-			}
-			offset += uint16(n)
-			if offset >= len {
-				break
-			}
+		if err != nil {
+			elog.Info("read h3conn end,status=", err)
+			return
 		}
 
 		ppkt := PolePacket(pkt)
@@ -181,7 +142,7 @@ func (h3c *Http3Conn) Write() {
 
 		pkt, ok := <-h3c.wch
 		if !ok {
-			elog.Error(h3c.String(), " get pkt from write channel fail,maybe channel closed")
+			elog.Error(h3c.String(), " channel closed")
 			return
 		}
 		if pkt == nil {
@@ -203,11 +164,7 @@ func (h3c *Http3Conn) Write() {
 		}
 		_, err := h3c.conn.Write(pkt)
 		if err != nil {
-			if err == io.EOF || err == io.ErrUnexpectedEOF {
-				elog.Info(h3c.String(), " conn closed")
-			} else {
-				elog.Error(h3c.String(), " conn write exception:", err)
-			}
+			elog.Error(h3c.String(), " h3conn write end status=", err)
 			return
 		}
 	}

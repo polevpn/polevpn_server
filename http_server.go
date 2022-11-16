@@ -88,7 +88,7 @@ func (hs *HttpServer) h3Handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	elog.Infof("user:%v,pwd:%v,ip:%v connect", user, pwd, ip)
+	elog.Infof("user:%v,pwd:%v,ip:%v,remoteip:%v connect,xff:%v", user, pwd, ip, r.RemoteAddr, r.Header.Get("X-Forwarded-For"))
 
 	err := hs.loginchecker.CheckLogin(user, pwd)
 	if err != nil {
@@ -118,7 +118,7 @@ func (hs *HttpServer) h3Handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	elog.Info("accpet new h3 conn ", conn.RemoteAddr().String())
+	elog.Info("accpet new h3 conn from ", user, " ", conn.RemoteAddr().String())
 	if hs.requestHandler == nil {
 		elog.Error("request dispatcher haven't set")
 		return
@@ -152,7 +152,7 @@ func (hs *HttpServer) wsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	elog.Infof("user:%v,pwd:%v,ip:%v connect", user, pwd, ip)
+	elog.Infof("user:%v,pwd:%v,ip:%v,remoteip:%v connect,xff:%v", user, pwd, ip, r.RemoteAddr, r.Header.Get("X-Forwarded-For"))
 
 	err := hs.loginchecker.CheckLogin(user, pwd)
 	if err != nil {
@@ -182,7 +182,7 @@ func (hs *HttpServer) wsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	elog.Info("accpet new ws conn ", conn.RemoteAddr().String())
+	elog.Info("accpet new ws conn from ", user, " ", conn.RemoteAddr().String())
 	if hs.requestHandler == nil {
 		elog.Error("request dispatcher haven't set")
 		return
