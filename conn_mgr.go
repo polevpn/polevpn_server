@@ -14,7 +14,6 @@ const (
 
 type ConnMgr struct {
 	ip2conns    map[string]Conn
-	conns       map[string]Conn
 	conn2ips    map[string]string
 	ip2actives  map[string]time.Time
 	ip2users    map[string]string
@@ -26,7 +25,6 @@ type ConnMgr struct {
 func NewConnMgr() *ConnMgr {
 	cm := &ConnMgr{
 		ip2conns:   make(map[string]Conn),
-		conns:      make(map[string]Conn),
 		mutex:      &sync.RWMutex{},
 		conn2ips:   make(map[string]string),
 		ip2actives: make(map[string]time.Time),
@@ -97,6 +95,33 @@ func (cm *ConnMgr) AllocAddress(conn Conn) string {
 	}
 
 	return ip
+}
+
+func (cm *ConnMgr) CheckAndAllocAddress(user string, ip string) bool {
+
+	cm.mutex.Lock()
+	defer cm.mutex.Unlock()
+
+	if cm.addresspool == nil {
+		elog.Error("address pool haven't set")
+		return false
+	}
+
+	dip := cm.addresspool.GetBindIP(user)
+
+	if dip != "" {
+		return true
+	}
+
+	if dip == "" {
+		if !cm.addresspool.IsAlloc(ip) {
+			cm.addresspool.SetAllocIP(ip)
+		}
+	}
+
+	cm.ip2actives[ip] = time.Now()
+
+	return true
 }
 
 func (cm *ConnMgr) RelelaseAddress(ip string) {
@@ -244,22 +269,4 @@ func (cm *ConnMgr) GeIPByConn(conn Conn) string {
 	cm.mutex.RLock()
 	defer cm.mutex.RUnlock()
 	return cm.conn2ips[conn.String()]
-}
-
-func (cm *ConnMgr) SetConn(streamId string, conn Conn) {
-	cm.mutex.Lock()
-	defer cm.mutex.Unlock()
-	cm.conns[streamId] = conn
-}
-
-func (cm *ConnMgr) GetConn(streamId string) Conn {
-	cm.mutex.RLock()
-	defer cm.mutex.RUnlock()
-	return cm.conns[streamId]
-}
-
-func (cm *ConnMgr) RemoveConn(streamId string) {
-	cm.mutex.Lock()
-	defer cm.mutex.Unlock()
-	delete(cm.conns, streamId)
 }

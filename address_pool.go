@@ -71,6 +71,10 @@ func (ap *AddressPool) Alloc() string {
 	return ""
 }
 
+func (ap *AddressPool) SetAllocIP(ip string) {
+	ap.pool[ip] = true
+}
+
 func (ap *AddressPool) GatewayIP() string {
 	return ap.gw
 }

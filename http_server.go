@@ -162,14 +162,13 @@ func (hs *HttpServer) wsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if ip != "" {
-		if !hs.requestHandler.connmgr.IsAllocedAddress(ip) {
+		if !hs.requestHandler.connmgr.CheckAndAllocAddress(user, ip) {
 			elog.Errorf("user:%v,pwd:%v,ip:%v reconnect fail,ip address not alloc to it", user, pwd, ip)
 			hs.respError(http.StatusBadRequest, w)
-
 			return
 		}
 
-		if hs.requestHandler.connmgr.GetIPAttachUser(ip) != user {
+		if hs.requestHandler.connmgr.GetIPAttachUser(ip) != "" && hs.requestHandler.connmgr.GetIPAttachUser(ip) != user {
 			elog.Errorf("user:%v,pwd:%v,ip:%v reconnect fail,ip address not belong to the user", user, pwd, ip)
 			hs.respError(http.StatusBadRequest, w)
 			return
