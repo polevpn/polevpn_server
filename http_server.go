@@ -105,7 +105,7 @@ func (hs *HttpServer) h3Handler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if hs.requestHandler.connmgr.GetIPAttachUser(ip) != user {
+		if hs.requestHandler.connmgr.GetIPAttachUser(ip) != "" && hs.requestHandler.connmgr.GetIPAttachUser(ip) != user {
 			elog.Errorf("user:%v,pwd:%v,ip:%v reconnect fail,ip address not belong to the user", user, pwd, ip)
 			hs.respError(http.StatusBadRequest, w)
 			return
