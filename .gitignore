@@ -1,3 +1,4 @@
 *.out
 *.log
 polevpn_server
+config.json
