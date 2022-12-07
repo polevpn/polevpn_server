@@ -98,10 +98,10 @@ func (hs *HttpServer) h3Handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if ip != "" {
-		if !hs.requestHandler.connmgr.IsAllocedAddress(ip) {
+
+		if !hs.requestHandler.connmgr.CheckAndAllocAddress(user, ip) {
 			elog.Errorf("user:%v,pwd:%v,ip:%v reconnect fail,ip address not alloc to it", user, pwd, ip)
 			hs.respError(http.StatusBadRequest, w)
-
 			return
 		}
 
