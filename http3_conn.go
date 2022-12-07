@@ -111,7 +111,7 @@ func (h3c *Http3Conn) Read() {
 		pkt, err := ReadPacket(h3c.conn)
 
 		if err != nil {
-			elog.Info("read h3conn end,status=", err)
+			elog.Info(h3c.String(), " read h3conn end,status=", err)
 			return
 		}
 
