@@ -4,18 +4,17 @@
         "cert_file":"./keys/server.crt",
         "key_file":"./keys/server.key"
     },
-    "network_cidr":"10.9.0.0/16",
-    "dns_server":"223.5.5.5",
+    "network_cidr":"10.8.0.0/16",
+    "dns_server":"8.8.8.8",
     "client_route":["1.0.0.0/8", "2.0.0.0/7", "4.0.0.0/6", "8.0.0.0/5", "16.0.0.0/4", "32.0.0.0/3", "64.0.0.0/2", "128.0.0.0/1"],
-    "server_route":[{"cidr":"192.168.1.0/24","gw":"10.9.3.6"}],
-    "bind_ip":[{"user":"user1","ip":"10.9.3.6"}],
+    "server_route":[],
+    "bind_ip":[],
     "upstream_traffic_limit":52428800,
     "downstream_traffic_limit":104857600,
     "auth":{
-        "users":[
-            {"user":"user1","pwd":"123456"},
-            {"user":"user2","pwd":"123456"}
-        ],
+        "file":{
+            "path":"users.credentials"
+        },
         "http":{
             "url":"http://127.0.0.1/auth",
             "timeout":5
