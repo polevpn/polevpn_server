@@ -1,2 +1,4 @@
 # PoleVPN a secure fast reliable VPN
-客户端下载 见官网链接 
+
+[中文文档](https://polevpn.com/docs)
+[English](https://polepvn.cpm/docs)
