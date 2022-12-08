@@ -1,4 +1,4 @@
 # PoleVPN a secure fast reliable VPN
 
-[中文文档](https://polevpn.com/docs)
-[English](https://polepvn.cpm/docs)
+[中文文档](https://www.polevpn.com/docs)
+[English](https://www.polevpn.cpm/docs)
