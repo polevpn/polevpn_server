@@ -21,7 +21,7 @@
         },
         "ldap":{
             "host":"ldap://127.0.0.1:389",
-            "dn":"CN=users,DC=polevpn,DC=com",
+            "dn":"CN=users,DC=polevpn,DC=com"
         }
     }
 }
