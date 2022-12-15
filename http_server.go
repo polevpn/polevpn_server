@@ -88,7 +88,7 @@ func (hs *HttpServer) h3Handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	elog.Infof("user:%v,pwd:%v,ip:%v,remoteip:%v connect,xff:%v", user, pwd, ip, r.RemoteAddr, r.Header.Get("X-Forwarded-For"))
+	elog.Infof("user:%v,ip:%v,remoteip:%v connect,xff:%v", user, ip, r.RemoteAddr, r.Header.Get("X-Forwarded-For"))
 
 	err := hs.loginchecker.CheckLogin(user, pwd)
 	if err != nil {
@@ -152,7 +152,7 @@ func (hs *HttpServer) wsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	elog.Infof("user:%v,pwd:%v,ip:%v,remoteip:%v connect,xff:%v", user, pwd, ip, r.RemoteAddr, r.Header.Get("X-Forwarded-For"))
+	elog.Infof("user:%v,ip:%v,remoteip:%v connect,xff:%v", user, ip, r.RemoteAddr, r.Header.Get("X-Forwarded-For"))
 
 	err := hs.loginchecker.CheckLogin(user, pwd)
 	if err != nil {

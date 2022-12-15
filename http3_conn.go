@@ -133,10 +133,24 @@ func (h3c *Http3Conn) Read() {
 
 }
 
+func (h3c *Http3Conn) drainWriteCh() {
+	for {
+		select {
+		case _, ok := <-h3c.wch:
+			if !ok {
+				return
+			}
+		default:
+			return
+		}
+	}
+}
+
 func (h3c *Http3Conn) Write() {
 
 	defer h3c.wg.Done()
 	defer PanicHandler()
+	defer h3c.drainWriteCh()
 
 	for {
 
@@ -175,6 +189,11 @@ func (h3c *Http3Conn) Send(pkt []byte) {
 		return
 	}
 	if h3c.wch != nil {
-		h3c.wch <- pkt
+
+		select {
+		case h3c.wch <- pkt:
+		default:
+			elog.Error(h3c.String(), " wch is full")
+		}
 	}
 }

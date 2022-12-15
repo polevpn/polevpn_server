@@ -131,8 +131,22 @@ func (wsc *WebSocketConn) Read() {
 
 }
 
+func (wsc *WebSocketConn) drainWriteCh() {
+	for {
+		select {
+		case _, ok := <-wsc.wch:
+			if !ok {
+				return
+			}
+		default:
+			return
+		}
+	}
+}
+
 func (wsc *WebSocketConn) Write() {
 	defer PanicHandler()
+	defer wsc.drainWriteCh()
 
 	for {
 
@@ -171,6 +185,10 @@ func (wsc *WebSocketConn) Send(pkt []byte) {
 		return
 	}
 	if wsc.wch != nil {
-		wsc.wch <- pkt
+		select {
+		case wsc.wch <- pkt:
+		default:
+			elog.Error(wsc.String(), " wch is full")
+		}
 	}
 }
