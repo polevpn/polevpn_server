@@ -1,7 +1,7 @@
 # PoleVPN a secure fast reliable VPN
 
 ## 企业级VPN 您值得信赖
-* 支持企业vpn 的各种功能
+* 支持企业VPN 的各种功能
 * 配置方便，一键接入
 ## 为什么会有PoleVPN
 * 疫情期间远程办公,需要有VPN，来接入公司，IDC 资源
