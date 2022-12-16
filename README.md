@@ -1,8 +1,14 @@
 # PoleVPN a secure fast reliable VPN
 
 ## 企业级VPN 您值得信赖
-* 支持企业VPN 的各种功能
-* 配置方便，一键接入
+* 部署·配置方便，一键接入
+* 全程TLS 通信加密，安全可靠
+* 支持网桥功能，快速远程组网
+* 支持IOT 设备组网
+* 可以作为代理服务器
+* 全客户端支持（ios android,windows,macos,linux）
+* 支持流量控制，限速
+
 ## 为什么会有PoleVPN
 * 疫情期间远程办公,需要有VPN，来接入公司，IDC 资源
 * 跨国团队，VPN 不能被GFW墙，用OpenVPN 会被墙(虽然可以通过其他隧道方式伪装)
