@@ -5,12 +5,12 @@
         "key_file":"./keys/server.key"
     },
     "network_cidr":"10.8.0.0/16",
-    "dns_server":"8.8.8.8",
+    "dns":"8.8.8.8",
     "client_routes":["1.0.0.0/8", "2.0.0.0/7", "4.0.0.0/6", "8.0.0.0/5", "16.0.0.0/4", "32.0.0.0/3", "64.0.0.0/2", "128.0.0.0/1"],
     "server_routes":[],
-    "bind_ip":[],
-    "upstream_traffic_limit":52428800,
-    "downstream_traffic_limit":104857600,
+    "bind_ips":[],
+    "up_traffic_limit":52428800,
+    "down_traffic_limit":104857600,
     "auth":{
         "file":{
             "path":"users.credentials"
