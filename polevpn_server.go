@@ -48,6 +48,7 @@ func (ps *PoleVPNServer) Start(config *anyvalue.AnyValue) error {
 	packetHandler := NewPacketDispatcher()
 
 	packetHandler.SetConnMgr(connmgr)
+	packetHandler.SetRouterMgr(routermgr)
 
 	tunio, err := NewTunIO(CH_TUNIO_WRITE_SIZE, packetHandler)
 

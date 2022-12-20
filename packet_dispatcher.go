@@ -1,6 +1,8 @@
 package main
 
 import (
+	"net"
+
 	"github.com/polevpn/elog"
 	"github.com/polevpn/netstack/tcpip/header"
 )
@@ -11,7 +13,8 @@ const (
 )
 
 type PacketDispatcher struct {
-	connmgr *ConnMgr
+	connmgr   *ConnMgr
+	routermgr *RouterMgr
 }
 
 func NewPacketDispatcher() *PacketDispatcher {
@@ -21,6 +24,10 @@ func NewPacketDispatcher() *PacketDispatcher {
 
 func (p *PacketDispatcher) SetConnMgr(connmgr *ConnMgr) {
 	p.connmgr = connmgr
+}
+
+func (p *PacketDispatcher) SetRouterMgr(routermgr *RouterMgr) {
+	p.routermgr = routermgr
 }
 
 func (p *PacketDispatcher) Dispatch(pkt []byte) {
@@ -33,10 +40,17 @@ func (p *PacketDispatcher) Dispatch(pkt []byte) {
 
 	ipv4pkt := header.IPv4(pkt)
 
-	ipaddr := ipv4pkt.DestinationAddress().To4().String()
-	conn := p.connmgr.GetConnByIP(ipaddr)
+	ip := ipv4pkt.DestinationAddress().To4()
+	ipstr := ip.String()
+	conn := p.connmgr.GetConnByIP(ipstr)
+
 	if conn == nil {
-		elog.Debug("connmgr can't find wsconn for", ipaddr)
+		gw := p.routermgr.FindRoute(net.IP(ip))
+		conn = p.connmgr.GetConnByIP(gw)
+	}
+
+	if conn == nil {
+		elog.Debug("connmgr can't find wsconn for", ipstr)
 		return
 	}
 	buf := make([]byte, len(pkt)+POLE_PACKET_HEADER_LEN)
