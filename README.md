@@ -10,6 +10,7 @@
 * 可以作为代理服务器
 * 全客户端支持（ios android,windows,macos,linux）
 * 支持流量控制，限速
+* 代码开源
 
 ## 为什么会有PoleVPN
 * 疫情期间远程办公,需要有VPN，来接入公司，IDC 资源
