@@ -18,7 +18,7 @@
 
 ## Documentation Client Download
 * [Documents](https://www.polevpn.com/docs/en)
-* [Clients Download](https://www.polevpn.com/index.html#download)
+* [Download](https://www.polevpn.com/index.html#download)
 
 ## Project official website
 * [polevpn.com](https://polevpn.com)
