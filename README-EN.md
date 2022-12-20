@@ -16,7 +16,7 @@
 * Need to have bridge function, routing function, can get through the company network, test environment network, development environment network, convenient for developers to debug and develop
 * The configuration should not be too complicated (OpenVPN installation, maintenance is too complicated)
 
-## Documentation Client Download
+## Documentation & Download
 * [Documents](https://www.polevpn.com/docs/en)
 * [Download](https://www.polevpn.com/index.html#download)
 
