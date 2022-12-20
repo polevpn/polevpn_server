@@ -22,3 +22,6 @@
 
 ## Project official website
 * [polevpn.com](https://polevpn.com)
+
+## Telegram group
+[Telegram Group](https://t.me/polevpn)
