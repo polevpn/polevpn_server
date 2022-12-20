@@ -23,3 +23,7 @@
 
 ## 项目官网
 * [polevpn.com](https://polevpn.com)
+
+## Telegram Group
+
+[Telegram Group](https://t.me/polevpn)
