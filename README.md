@@ -22,8 +22,6 @@
 ## 项目官网
 * [polevpn.com](https://polevpn.com)
 
-------------------------------------------------------------------------------------------------------------------------------
-
 # PoleVPN a secure fast reliable VPN
 
 ## Enterprise VPN you can trust
