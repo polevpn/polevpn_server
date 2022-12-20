@@ -1,0 +1,15 @@
+[Unit]
+Description=polevpn
+After=network.target 
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=5s
+PIDFile=/opt/polevpn_server/polevpn.pid
+ExecStart=/opt/polevpn_server/polevpn_server -config=/opt/polevpn_server/config.json -logPath=/opt/polevpn_server/logs
+ExecStop=/bin/kill -s QUIT $MAINPID
+PrivateTmp=true
+  
+[Install]
+WantedBy=multi-user.target
