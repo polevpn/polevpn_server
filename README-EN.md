@@ -17,7 +17,7 @@
 * The configuration should not be too complicated (OpenVPN installation, maintenance is too complicated)
 
 ## Documentation Client Download
-* [English](https://www.polevpn.com/docs/en)
+* [Documents](https://www.polevpn.com/docs/en)
 * [Clients Download](https://www.polevpn.com/index.html#download)
 
 ## Project official website
