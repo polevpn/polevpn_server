@@ -1,6 +1,8 @@
 
 # PoleVPN a secure fast reliable VPN
 
+[简体中文](https://github.com/polevpn/polevpn_server/blob/main/README-zh.md)
+
 ## Enterprise VPN you can trust
 * Easy deployment and configuration, one-click access
 * Full TLS communication encryption, safe and reliable
