@@ -13,7 +13,7 @@
 * Support flow control, speed limit
 * Support local file,http interface,LDAP authenticate method
 
-## Why PoleVPN
+## Why Developed PoleVPN
 * To work remotely during the epidemic, a VPN is required to access company and IDC resources
 * For multinational teams, VPN cannot be blocked by GFW, but OpenVPN will be blocked (although it can be disguised by other tunnel methods)
 * Need to have bridge function, routing function, can get through the company network, test environment network, development environment network, convenient for developers to debug and develop
