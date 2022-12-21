@@ -1,6 +1,6 @@
 # PoleVPN a secure fast reliable VPN
 
-[English](https://github.com/polevpn/polevpn_server/blob/main/README-EN.md)
+[English](https://github.com/polevpn/polevpn_server/blob/main/README.md)
 
 ## 企业级VPN 您值得信赖
 * 部署·配置方便，一键接入
