@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -124,16 +125,37 @@ func (llc *LocalLoginChecker) checkHttpLogin(user string, pwd string) error {
 
 func (llc *LocalLoginChecker) checkLDAPLogin(user string, pwd string) error {
 
-	client, err := ldap.DialURL(Config.Get("auth.ldap.host").AsStr())
+	l, err := ldap.DialURL(Config.Get("auth.ldap.host").AsStr())
 	if err != nil {
 		return err
 	}
-	defer client.Close()
+	defer l.Close()
 
-	_, err = client.SimpleBind(&ldap.SimpleBindRequest{
-		Username: "CN=" + user + "," + Config.Get("auth.ldap.dn").AsStr(),
-		Password: pwd,
-	})
+	err = l.Bind(Config.Get("auth.ldap.admin_dn").AsStr(), Config.Get("auth.ldap.admin_pwd").AsStr())
+	if err != nil {
+		return err
+	}
+
+	searchRequest := ldap.NewSearchRequest(
+		Config.Get("auth.ldap.user_dn").AsStr(),
+		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
+		fmt.Sprintf("(&(objectClass=organizationalPerson)(uid=%s))", user),
+		[]string{"dn"},
+		nil,
+	)
+
+	sr, err := l.Search(searchRequest)
+	if err != nil {
+		return err
+	}
+
+	if len(sr.Entries) != 1 {
+		return errors.New("User does not exist")
+	}
+
+	userdn := sr.Entries[0].DN
+
+	err = l.Bind(userdn, pwd)
 	if err != nil {
 		return err
 	}

@@ -20,8 +20,10 @@
             "timeout":5
         },
         "ldap":{
-            "host":"ldap://127.0.0.1:389",
-            "dn":"CN=users,DC=polevpn,DC=com"
+            "host":"ldap://localhost",
+	        "admin_dn":"cn=admin,dc=polevpn,dc=com",
+	        "admin_pwd":"xxxxx",
+            "user_dn":"ou=Users,dc=polevpn,dc=com"
         }
     }
 }
