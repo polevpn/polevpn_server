@@ -10,6 +10,7 @@
 * 可以作为代理服务器
 * 全客户端支持（ios android,windows,macos,linux）
 * 支持流量控制，限速
+* 支持 本地文件，http 接口，LDAP 认证方式
 * 代码开源
 
 ## 为什么会有PoleVPN
