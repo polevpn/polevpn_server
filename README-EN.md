@@ -9,6 +9,7 @@
 * Can act as a proxy server
 * Full client support (ios android, windows, macos, linux)
 * Support flow control, speed limit
+* Support local file,http interface,LDAP authenticate method
 
 ## Why PoleVPN
 * To work remotely during the epidemic, a VPN is required to access company and IDC resources
