@@ -35,7 +35,7 @@ func NewLocalLoginChecker() *LocalLoginChecker {
 	return &LocalLoginChecker{}
 }
 
-func (llc *LocalLoginChecker) CheckLogin(user string, pwd string, deviceType string, deviceId string) error {
+func (llc *LocalLoginChecker) CheckLogin(user string, pwd string, remoteIp string, deviceType string, deviceId string) error {
 
 	var err error
 

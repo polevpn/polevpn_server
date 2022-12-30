@@ -2,6 +2,7 @@ package main
 
 import (
 	"net/http"
+	"strings"
 	"sync"
 
 	"github.com/gorilla/websocket"
@@ -92,7 +93,7 @@ func (hs *HttpServer) h3Handler(w http.ResponseWriter, r *http.Request) {
 
 	elog.Infof("user:%v,ip:%v,deviceType:%v,deviceId:%v,remoteip:%v connect,xff:%v", user, ip, deviceType, deviceId, r.RemoteAddr, r.Header.Get("X-Forwarded-For"))
 
-	err := hs.loginchecker.CheckLogin(user, pwd, deviceType, deviceId)
+	err := hs.loginchecker.CheckLogin(user, pwd, strings.Split(r.RemoteAddr, ":")[0], deviceType, deviceId)
 	if err != nil {
 		elog.Errorf("user:%v,pwd:%v,ip:%v verify fail,%v", user, pwd, ip, err)
 		hs.respError(http.StatusForbidden, w)
@@ -158,7 +159,7 @@ func (hs *HttpServer) wsHandler(w http.ResponseWriter, r *http.Request) {
 
 	elog.Infof("user:%v,ip:%v,deviceType:%v,deviceId:%v,remoteip:%v connect,xff:%v", user, ip, deviceType, deviceId, r.RemoteAddr, r.Header.Get("X-Forwarded-For"))
 
-	err := hs.loginchecker.CheckLogin(user, pwd, deviceType, deviceId)
+	err := hs.loginchecker.CheckLogin(user, pwd, strings.Split(r.RemoteAddr, ":")[0], deviceType, deviceId)
 	if err != nil {
 		elog.Errorf("user:%v,pwd:%v,ip:%v verify fail,%v", user, pwd, ip, err)
 		hs.respError(http.StatusForbidden, w)
