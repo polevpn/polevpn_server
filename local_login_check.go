@@ -35,7 +35,7 @@ func NewLocalLoginChecker() *LocalLoginChecker {
 	return &LocalLoginChecker{}
 }
 
-func (llc *LocalLoginChecker) CheckLogin(user string, pwd string) error {
+func (llc *LocalLoginChecker) CheckLogin(user string, pwd string, deviceType string, deviceId string) error {
 
 	var err error
 
@@ -48,7 +48,7 @@ func (llc *LocalLoginChecker) CheckLogin(user string, pwd string) error {
 	}
 
 	if Config.Has("auth.http") {
-		err = llc.checkHttpLogin(user, pwd)
+		err = llc.checkHttpLogin(user, pwd, deviceType, deviceId)
 	}
 
 	if err == nil {
@@ -91,12 +91,15 @@ func (llc *LocalLoginChecker) checkFileLogin(user string, pwd string) error {
 	return errors.New("user or password incorrect")
 }
 
-func (llc *LocalLoginChecker) checkHttpLogin(user string, pwd string) error {
+func (llc *LocalLoginChecker) checkHttpLogin(user string, pwd string, deviceType string, deviceId string) error {
 
 	req := anyvalue.New()
 
 	req.Set("user", user)
 	req.Set("pwd", pwd)
+	req.Set("deviceType", deviceType)
+	req.Set("deviceId", deviceId)
+
 	data, _ := req.EncodeJson()
 
 	client := http.Client{Timeout: time.Duration(Config.Get("auth.http.timeout").AsInt()) * time.Second}

@@ -82,15 +82,17 @@ func (hs *HttpServer) h3Handler(w http.ResponseWriter, r *http.Request) {
 	user := r.URL.Query().Get("user")
 	pwd := r.URL.Query().Get("pwd")
 	ip := r.URL.Query().Get("ip")
+	deviceType := r.URL.Query().Get("deviceType")
+	deviceId := r.URL.Query().Get("devideId")
 
 	if user == "" || pwd == "" {
 		hs.respError(http.StatusForbidden, w)
 		return
 	}
 
-	elog.Infof("user:%v,ip:%v,remoteip:%v connect,xff:%v", user, ip, r.RemoteAddr, r.Header.Get("X-Forwarded-For"))
+	elog.Infof("user:%v,ip:%v,deviceType:%v,deviceId:%v,remoteip:%v connect,xff:%v", user, ip, deviceType, deviceId, r.RemoteAddr, r.Header.Get("X-Forwarded-For"))
 
-	err := hs.loginchecker.CheckLogin(user, pwd)
+	err := hs.loginchecker.CheckLogin(user, pwd, deviceType, deviceId)
 	if err != nil {
 		elog.Errorf("user:%v,pwd:%v,ip:%v verify fail,%v", user, pwd, ip, err)
 		hs.respError(http.StatusForbidden, w)
@@ -146,15 +148,17 @@ func (hs *HttpServer) wsHandler(w http.ResponseWriter, r *http.Request) {
 	user := r.URL.Query().Get("user")
 	pwd := r.URL.Query().Get("pwd")
 	ip := r.URL.Query().Get("ip")
+	deviceType := r.URL.Query().Get("deviceType")
+	deviceId := r.URL.Query().Get("deviceId")
 
 	if user == "" || pwd == "" {
 		hs.respError(http.StatusForbidden, w)
 		return
 	}
 
-	elog.Infof("user:%v,ip:%v,remoteip:%v connect,xff:%v", user, ip, r.RemoteAddr, r.Header.Get("X-Forwarded-For"))
+	elog.Infof("user:%v,ip:%v,deviceType:%v,deviceId:%v,remoteip:%v connect,xff:%v", user, ip, deviceType, deviceId, r.RemoteAddr, r.Header.Get("X-Forwarded-For"))
 
-	err := hs.loginchecker.CheckLogin(user, pwd)
+	err := hs.loginchecker.CheckLogin(user, pwd, deviceType, deviceId)
 	if err != nil {
 		elog.Errorf("user:%v,pwd:%v,ip:%v verify fail,%v", user, pwd, ip, err)
 		hs.respError(http.StatusForbidden, w)
