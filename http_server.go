@@ -83,7 +83,7 @@ func (hs *HttpServer) h3Handler(w http.ResponseWriter, r *http.Request) {
 	pwd := r.URL.Query().Get("pwd")
 	ip := r.URL.Query().Get("ip")
 	deviceType := r.URL.Query().Get("deviceType")
-	deviceId := r.URL.Query().Get("devideId")
+	deviceId := r.URL.Query().Get("deviceId")
 
 	if user == "" || pwd == "" {
 		hs.respError(http.StatusForbidden, w)
