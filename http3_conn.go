@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	CH_H3C_WRITE_SIZE = 2000
+	CH_H3C_WRITE_SIZE = 100
 )
 
 type Http3Conn struct {

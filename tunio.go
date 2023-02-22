@@ -39,7 +39,7 @@ func NewTunIO(size int, handler *PacketDispatcher) (*TunIO, error) {
 // ip route add 10.8.0.0/24 via 10.8.0.1
 func (t *TunIO) SetIPAddress(ip1 string) error {
 
-	out, err := exec.Command("bash", "-c", "ip addr add dev "+t.ifce.Name()+" local "+ip1+" peer "+ip1).Output()
+	out, err := exec.Command("bash", "-c", "ip addr add dev "+t.ifce.Name()+" local "+ip1+" peer "+ip1).CombinedOutput()
 
 	if err != nil {
 		return errors.New(err.Error() + "," + string(out))
@@ -49,7 +49,7 @@ func (t *TunIO) SetIPAddress(ip1 string) error {
 
 func (t *TunIO) Enanble() error {
 
-	out, err := exec.Command("bash", "-c", "ip link set "+t.ifce.Name()+" up").Output()
+	out, err := exec.Command("bash", "-c", "ip link set "+t.ifce.Name()+" up").CombinedOutput()
 
 	if err != nil {
 		return errors.New(err.Error() + "," + string(out))
@@ -58,7 +58,7 @@ func (t *TunIO) Enanble() error {
 }
 
 func (t *TunIO) AddRoute(cidr string, gw string) error {
-	out, err := exec.Command("bash", "-c", "ip route add "+cidr+" via "+gw).Output()
+	out, err := exec.Command("bash", "-c", "ip route add "+cidr+" via "+gw).CombinedOutput()
 
 	if err != nil {
 		return errors.New(err.Error() + "," + string(out))

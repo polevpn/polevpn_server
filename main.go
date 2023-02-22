@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	CH_TUNIO_WRITE_SIZE = 4096
+	CH_TUNIO_WRITE_SIZE = 200
 )
 
 var Config *anyvalue.AnyValue
