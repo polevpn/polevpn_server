@@ -41,7 +41,7 @@ func (r *RequestHandler) OnRequest(pkt []byte, conn Conn) {
 	case CMD_C2S_IPDATA:
 		r.handleC2SIPData(ppkt, conn)
 	case CMD_HEART_BEAT:
-		//elog.Info("received heart beat request", conn.String())
+		elog.Debug("received heart beat request,", conn.String())
 		r.handleHeartBeat(ppkt, conn)
 	case CMD_CLIENT_CLOSED:
 		r.handleClientClose(ppkt, conn)

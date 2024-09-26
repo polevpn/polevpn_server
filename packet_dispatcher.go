@@ -50,7 +50,7 @@ func (p *PacketDispatcher) Dispatch(pkt []byte) {
 	}
 
 	if conn == nil {
-		elog.Debug("connmgr can't find wsconn for", ipstr)
+		elog.Debug("connmgr can't find wsconn for ", ipstr)
 		return
 	}
 	buf := make([]byte, len(pkt)+POLE_PACKET_HEADER_LEN)
