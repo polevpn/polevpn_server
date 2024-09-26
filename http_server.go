@@ -6,9 +6,9 @@ import (
 	"sync"
 
 	"github.com/gorilla/websocket"
-	"github.com/lucas-clemente/quic-go/http3"
 	"github.com/polevpn/elog"
 	"github.com/polevpn/h3conn"
+	"github.com/quic-go/quic-go/http3"
 )
 
 const (
