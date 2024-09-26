@@ -60,7 +60,7 @@ func (hs *HttpServer) ListenTLS(wg *sync.WaitGroup, addr string, certFile string
 			hs.defaultHandler(w, r)
 		}
 	})
-	elog.Error(http3.ListenAndServe(addr, certFile, keyFile, handler))
+	elog.Error(http3.ListenAndServeTLS(addr, certFile, keyFile, handler))
 }
 
 func (hs *HttpServer) respError(status int, w http.ResponseWriter) {
