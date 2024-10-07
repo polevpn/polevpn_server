@@ -9,14 +9,10 @@ require (
 	github.com/gorilla/websocket v1.5.0
 	github.com/polevpn/anyvalue v1.0.6
 	github.com/polevpn/elog v1.1.1
-	github.com/polevpn/h3conn v1.0.15
+	github.com/polevpn/h3conn v1.0.19
 	github.com/polevpn/netstack v1.10.12
 	github.com/polevpn/water v1.0.4
 	github.com/quic-go/quic-go v0.47.0
-)
-
-replace(
-	github.com/polevpn/h3conn => ../h3conn
 )
 
 require (
