@@ -2,7 +2,6 @@ package main
 
 import (
 	"math/rand"
-	"sync"
 	"time"
 
 	"github.com/polevpn/elog"
@@ -17,7 +16,6 @@ const (
 )
 
 type Http3Conn struct {
-	wg           *sync.WaitGroup
 	conn         *h3conn.Conn
 	wch          chan []byte
 	closed       bool
@@ -28,9 +26,8 @@ type Http3Conn struct {
 	tcUpStream   *TrafficCounter
 }
 
-func NewHttp3Conn(wg *sync.WaitGroup, conn *h3conn.Conn, downlimit uint64, uplimit uint64, handler *RequestHandler) *Http3Conn {
+func NewHttp3Conn(conn *h3conn.Conn, downlimit uint64, uplimit uint64, handler *RequestHandler) *Http3Conn {
 	return &Http3Conn{
-		wg:           wg,
 		conn:         conn,
 		closed:       false,
 		wch:          make(chan []byte, CH_H3C_WRITE_SIZE),
@@ -100,7 +97,6 @@ func (h3c *Http3Conn) checkStreamLimit(pkt []byte, tfcounter *TrafficCounter, li
 func (h3c *Http3Conn) Read() {
 
 	defer func() {
-		h3c.wg.Done()
 		h3c.Close(true)
 	}()
 
@@ -148,7 +144,6 @@ func (h3c *Http3Conn) drainWriteCh() {
 
 func (h3c *Http3Conn) Write() {
 
-	defer h3c.wg.Done()
 	defer PanicHandler()
 	defer h3c.drainWriteCh()
 

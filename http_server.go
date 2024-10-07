@@ -128,13 +128,10 @@ func (hs *HttpServer) h3Handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if hs.requestHandler != nil {
-		wg := &sync.WaitGroup{}
-		wg.Add(2)
-		h3conn := NewHttp3Conn(wg, conn, hs.downlimit, hs.uplimit, hs.requestHandler)
+		h3conn := NewHttp3Conn(conn, hs.downlimit, hs.uplimit, hs.requestHandler)
 		hs.requestHandler.OnConnection(h3conn, user, ip)
 		go h3conn.Read()
 		go h3conn.Write()
-		wg.Wait()
 	} else {
 		elog.Error("h3 conn handler haven't set")
 		conn.Close()
